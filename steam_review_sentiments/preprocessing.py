@@ -27,12 +27,23 @@ def add_titles_ent_pipe(steam_reviews, nlp):
     None.
 
     """
-    # Get unique titles to add to the EntityRuler patterns
-    titles = steam_reviews.title.unique()
+    # Get unique, lowercase titles to add to the EntityRuler patterns
+    titles = steam_reviews.title.str.lower().str.strip().unique()
+
+    # Add in acronyms and whatnot. I'll load this from a file later.
+    # Also, this is incomplete. I'm adding these as a notice them.
+    # Totally scientific by the way.
+    # I'm avoiding really common words. But there has to be a better way
+    # to do this (topic modeling?).
+    titles = np.concatenate([titles, ["dota", "wc3", "nwn", "eso",
+                                      "ygo", "poe", "skyrim", "oblivion",
+                                      "new vegas", "fallout", "fallout nv",
+                                      "morrowind", "bf1", "bf2", "bf3",
+                                      "bad company", "bfbc"]])
 
     # Throw an error if titles aren't lowercase.
-    if np.apply_along_axis(np.frompyfunc(str.isupper, 1, 1), 0, titles):
-        raise ValueError("All game titles should be lowercase.")
+    # if any(np.apply_along_axis(np.frompyfunc(str.isupper, 1, 1), 0, titles)):
+    #    raise ValueError("All game titles should be lowercase.")
 
     # Titles are REALLY short so 256 is okay as a batch size.
     # The pipe function returns a generator of Doc.
@@ -68,26 +79,57 @@ def add_titles_ent_pipe(steam_reviews, nlp):
 
 @Language.component("add_title")
 def add_title(doc, titles_iter=None):
+    """spaCy component to add video game titles to each document.
+
+    Parameters
+    ----------
+    doc : spacy.tokens.Doc
+        Document passed to component (i.e. by a pipeline).
+    titles_iter : Iterable[Tuple[Union[Hashable, NoneType], Any]], optional
+        Iterator of (index, title) tuples. The iterator should be the length
+        of the DataFrame.
+
+    Raises
+    ------
+    StopIteration
+        Raises if titles_iter isn't the same length as the piped in docs.
+
+    Returns
+    -------
+    doc : spacy.tokens.Doc
+        Same doc that was passed in (because you know...pipeline).
+    """
     if titles_iter:
-        pass
+        doc._.title = next(titles_iter)
 
     return doc
 
 
-@Language.component("add_game_entity")
-def add_game_entity(doc, matcher=None):
-    # WORK_OF_ART
-    if matcher:
-        pass
-
-    return doc
+def add_title_bad(docs, steam_reviews):
+    for doc, title in zip(docs, steam_reviews.user_review.items()):
+        doc._.title = title[1]
 
 
 def load(path):
-    steam_rev= pd.read_csv(path, low_memory=False)
-    steam_rev.title = steam_rev.title.str.lower().str.strip()
+    """Load the data, spaCy model, and documents.
 
-    #
+    Parameters
+    ----------
+    path : str
+        Path to Steam review data CSV.
+
+    Returns
+    -------
+    pd.DataFrame
+        Review data.
+    spacy.lang.en.English
+        Language object with extra pipeline components.
+    List[spacy.tokens.Doc]
+        Documents passed through the NLP pipeline.
+    """
+    steam_rev = pd.read_csv(path, low_memory=False)
+    # Steam reviews can be voted funny or given a thumbs up.
+    # So...let's use these as our classes!
     steam_rev["up_funny"] = steam_rev.votes_up > steam_rev.votes_funny
 
     # Start with a pretrained model on blogs (maybe this is a bad idea?)
@@ -101,13 +143,13 @@ def load(path):
 
     # Add extra pipeline components
     add_titles_ent_pipe(steam_rev, nlp)
-    nlp.add_pipe("add_title",
-                 after="entity_ruler",
-                 config={"titles_iter": steam_rev.title.iteritems()})
+    # Can't get this to work.
+    # nlp.add_pipe("add_title",
+    #             after="entity_ruler",
+    #             config={"titles_iter": steam_rev.title.iteritems()})
 
     # Reviews are short so I'm using a large batch size.
     return steam_rev, nlp, list(nlp.pipe(steam_rev.user_review,
                                          cleanup=True,
                                          batch_size=256,
                                          n_process=-1))
-
