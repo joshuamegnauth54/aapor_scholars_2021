@@ -106,7 +106,7 @@ def add_title(doc, titles_iter=None):
 
 
 def add_title_bad(docs, steam_reviews):
-    for doc, title in zip(docs, steam_reviews.user_review.items()):
+    for doc, title in zip(docs, steam_reviews.title.items()):
         doc._.title = title[1]
 
 
@@ -149,7 +149,7 @@ def load(path):
     #             config={"titles_iter": steam_rev.title.iteritems()})
 
     # Reviews are short so I'm using a large batch size.
-    return steam_rev, nlp, list(nlp.pipe(steam_rev.user_review,
-                                         cleanup=True,
-                                         batch_size=256,
-                                         n_process=-1))
+    return steam_rev, nlp, np.array(list(nlp.pipe(steam_rev.user_review,
+                                                  cleanup=True,
+                                                  batch_size=256,
+                                                  n_process=-1)))
