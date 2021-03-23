@@ -110,6 +110,14 @@ def add_title_bad(docs, steam_reviews):
         doc._.title = title[1]
 
 
+def normalize_words(reviews):
+    """To do: Function to eat words and digest them into useful bits.
+    Check some common acronyms to turn into titles.
+    Replace terms like tps or fps by shooter.
+    """
+    pass
+
+
 def load(path):
     """Load the data, spaCy model, and documents.
 
@@ -152,4 +160,5 @@ def load(path):
     return steam_rev, nlp, np.array(list(nlp.pipe(steam_rev.user_review,
                                                   cleanup=True,
                                                   batch_size=256,
-                                                  n_process=-1)))
+                                                  n_process=-1)),
+                                    dtype=Doc)

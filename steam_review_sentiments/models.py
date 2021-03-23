@@ -1,7 +1,7 @@
 import numpy as np
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
@@ -99,15 +99,23 @@ def tfidf_transform(X_train, X_test):
     return X_train_tfidf, X_test_tfidf
 
 
-def logistic_cv(X_train, y_train):
-    if not isinstance(X_train, csr_matrix):
+def check_correct(X):
+    if not isinstance(X, csr_matrix):
         raise ValueError("Yeah, so, you probably passed in the dense matrix "
                          "which means that the model is going to eat up 10"
                          "GBs of RAM and have a terrible accuracy.\n\n"
                          "No one wants that. No one.")
 
-    params = {"C": np.arange(0.001, 1.001, 0.01)}
+def logistic_cv(X_train, y_train):
+    check_correct(X_train)
 
+    # I've found that less regularization (i.e. a more flexible model)
+    # works better for the review data.
+    params = {"C": np.arange(1, 51)}
+
+    # Elastic net regularization performs really well but takes forever to
+    # train for more complex models. I'm trying to keep this model simpler
+    # anyway.
     return RandomizedSearchCV(LogisticRegression(random_state=42,
                                                  solver="saga",
                                                  max_iter=2048),
@@ -117,8 +125,26 @@ def logistic_cv(X_train, y_train):
 
 
 def support_vector_cv(X_train, y_train):
-    if not isinstance(X_train, csr_matrix):
-        raise ValueError("Yeah, so, you probably passed in the dense matrix "
-                         "which means that the model is going to eat up 10"
-                         "GBs of RAM and have a terrible accuracy.\n\n"
-                         "No one wants that. No one.")
+    check_correct(X_train)
+
+    # Support vector machines take forever to fit with larger data sets.
+    # Likely won't run this model with the full data set.
+    params = {"C": np.arange(1, 11)}
+
+    return RandomizedSearchCV(SVC(cache_size=512, random_state=42),
+                              params,
+                              n_jobs=-1,
+                              predispatch=8,
+                              random_state=42).fit(X_train, y_train)
+
+
+def sgd_cv(X_train, y_train):
+    check_correct(X_train)
+
+    params = {}
+
+    return RandomizedSearchCV(SGDClassifier(),
+                              params,
+                              n_jobs=-1,
+                              predispatch=8,
+                              random_state=42).fit(X_train, y_train)
