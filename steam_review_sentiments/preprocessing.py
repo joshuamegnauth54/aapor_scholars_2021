@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import spacy
+import json
+
 from spacy.tokens import Doc, Span, Token
 from spacy.matcher import Matcher
 from spacy.language import Language
@@ -115,7 +117,25 @@ def normalize_words(reviews):
     Check some common acronyms to turn into titles.
     Replace terms like tps or fps by shooter.
     """
-    pass
+    with open("cleanup.json", 'r') as cleanup_file:
+        cleanup = json.load(cleanup_file)
+
+        # gen = {pair["term"]: pair["replace"] for pair in cleanup["generic"]}
+        # reviews.user_review.replace(gen, inplace=True)
+        # I can't use Series.replace because I need case insensitive searching
+        for rep in cleanup["generic"]:
+            reviews.user_review = reviews.user_review.str.replace(rep["term"],
+                                                                  rep["replace"],
+                                                                  case=False)
+
+        # Games (or series) may their own acronyms or jargon to replace.
+        # This is woefully incomplete.
+        for rep in cleanup["game"]:
+            mask = reviews.title.str.contains(rep["title"],
+                                              case=False)
+
+            #reviews.loc[mask, "user_review"] = reviews[mask].user_review.str.replace()
+            pass
 
 
 def load(path):

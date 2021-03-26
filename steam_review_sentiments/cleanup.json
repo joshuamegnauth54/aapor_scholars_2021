@@ -1,0 +1,75 @@
+{
+    "generic": [
+        {
+            "term": "moba",
+            "replace": "multiplayer online battle arena"
+        },
+        {
+            "term": "fps",
+            "replace": "shooter"
+        },
+        {
+            "term": "tps",
+            "replace": "shooter"
+        },
+        {
+            "term": "♥",
+            "replace": "heart"
+        },
+        {
+            "term": "™",
+            "replace": "trademark"
+        },
+        {
+            "term": "✓",
+            "replace": "checkmark"
+        },
+        {
+            "term": "dlc",
+            "replace": "downloadable content"
+        },
+        {
+            "term": "vr",
+            "replace": "virtual reality"
+        },
+        {
+            "term": "pve",
+            "replace": "player versus environment"
+        },
+        {
+            "term": "pvp",
+            "replace": "player versus player"
+        },
+        {
+            "term": "mmo",
+            "replace": "massively multiplayer online"
+        },
+        {
+            "term": "rpg",
+            "replace": "role playing game"
+        },
+        {
+            "term": "mmorpg",
+            "replace": "massively multiplayer online role playing game"
+        },
+        {
+            "term": "jrpg",
+            "replace": "japanese role playing game"
+        },
+        {
+            "term": "wrpg",
+            "replace": "western role playing game"
+        },
+        {
+            "term": "arpg",
+            "replace": "action role playing game"
+        }
+],
+    "game": [
+        {
+            "title": "call of duty",
+            "term": []
+        }
+
+    ]
+}
