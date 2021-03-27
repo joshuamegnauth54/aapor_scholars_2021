@@ -108,6 +108,20 @@ def add_title(doc, titles_iter=None):
 
 
 def add_title_bad(docs, steam_reviews):
+    """Add game title to Doc[s] inefficiently.
+
+    Parameters
+    ----------
+    docs : Iterable[spacy.tokens.Doc]
+        Iterator of spaCy Docs.
+    steam_reviews : pd.DataFrame
+        DataFrame of Steam review data.
+
+    Returns
+    -------
+    None.
+
+    """
     for doc, title in zip(docs, steam_reviews.title.items()):
         doc._.title = title[1]
 
@@ -117,6 +131,16 @@ def normalize_words(reviews):
     Check some common acronyms to turn into titles.
     Replace terms like tps or fps by shooter.
     """
+
+    # Replace long sequences of curse filter avoidance with #*%@.
+    # I mean...you know what I mean.
+    # Note that the string of ****** may be something entirely different,
+    # but I've noticed they're expletives more often than not.
+    curse_pat = r"([♥|*|@|$|%])\1{3,}"
+    reviews.user_review = reviews.user_review.str.replace(curse_pat,
+                                                          "fuck",
+                                                          regex=True)
+
     with open("cleanup.json", 'r') as cleanup_file:
         cleanup = json.load(cleanup_file)
 
@@ -130,12 +154,15 @@ def normalize_words(reviews):
 
         # Games (or series) may their own acronyms or jargon to replace.
         # This is woefully incomplete.
-        for rep in cleanup["game"]:
-            mask = reviews.title.str.contains(rep["title"],
+        for d in cleanup["game"]:
+            mask = reviews.title.str.contains(d["title"],
                                               case=False)
 
-            #reviews.loc[mask, "user_review"] = reviews[mask].user_review.str.replace()
-            pass
+            for term, rep in zip(d["term"], d["replace"]):
+                reviews.loc[mask, "user_review"] =\
+                    reviews[mask].user_review.str.replace(term,
+                                                          rep,
+                                                          case=False)
 
 
 def load(path):
@@ -156,6 +183,7 @@ def load(path):
         Documents passed through the NLP pipeline.
     """
     steam_rev = pd.read_csv(path, low_memory=False)
+    normalize_words(steam_rev)
     # Steam reviews can be voted funny or given a thumbs up.
     # So...let's use these as our classes!
     steam_rev["up_funny"] = steam_rev.votes_up > steam_rev.votes_funny

@@ -6,8 +6,11 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = ["steam_review_api"]
+
 [dependencies]
-url = "^2.2.1"
+steam_review_api = {path = "steam_review_api"}
 serde = {version = "^1.0.124", features = ["derive"]}
 serde_json = "^1.0.64"
 attohttpc = {version = "^0.16.3", features = ["json"]}

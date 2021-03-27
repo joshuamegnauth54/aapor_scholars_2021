@@ -68,7 +68,7 @@ def split(docs, y):
     return train_test_split(docs, y, random_state=42, stratify=y)
 
 
-def tfidf_transform(X_train, X_test):
+def tfidf_transform(X_train, X_test, max_features=None):
     """Transforms and vectorizes the training then test sets.
 
     Train is transformed first followed by the test set using the same object.
@@ -81,6 +81,8 @@ def tfidf_transform(X_train, X_test):
         Corpus.
     X_test : Iterable[spacy.tokens.Doc]
         Corpus.
+    max_features : uint
+        Maximum number of features. Passed down to TfidfVectorizer.
 
     Returns
     -------
@@ -89,10 +91,12 @@ def tfidf_transform(X_train, X_test):
     X_test_tfidf : sparse.csr.csr_matrix
         Transform y_train.
     """
-    tfidf = TfidfVectorizer(preprocessor=null_preproc,
+    tfidf = TfidfVectorizer(strip_accents="unicode",
+                            preprocessor=null_preproc,
                             tokenizer=transform_string,
                             token_pattern=None,
-                            ngram_range=(1, 3))
+                            ngram_range=(1, 3),
+                            max_features=max_features)
 
     # Fit and transform training set followed by...
     X_train_tfidf = tfidf.fit_transform(X_train)
@@ -103,4 +107,5 @@ def tfidf_transform(X_train, X_test):
 
 
 def vocab_counts(tfidf):
-    return {count: term for (term, count) in tfidf.vocabulary_.items()}
+    inverse = {count: term for (term, count) in tfidf.vocabulary_.items()}
+    return []

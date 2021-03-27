@@ -49,6 +49,10 @@
             "replace": "role playing game"
         },
         {
+            "term": "mmorp",
+            "replace": "massively multiplayer online role playing game"
+        },
+        {
             "term": "mmorpg",
             "replace": "massively multiplayer online role playing game"
         },
@@ -63,12 +67,56 @@
         {
             "term": "arpg",
             "replace": "action role playing game"
+        },
+        {
+            "term": "fck",
+            "replace": "fuck"
+        },
+        {
+            "term": "f**k",
+            "replace": "fuck"
+        },
+        {
+            "term": "f***",
+            "replace": "fuck"
+        },
+        {
+            "term": "****ing",
+            "replace": "fuck"
+        },
+        {
+            "term": "fuc",
+            "replace": "fuck"
+        },
+        {
+            "term": "sht",
+            "replace": "shit"
+        },
+        {
+            "term": "s**t",
+            "replace": "shit"
+        },
+        {
+            "term": "btch",
+            "replace": "bitch"
+        },
+        {
+            "term": "*****",
+            "replace": "bitch"
+        },
+        {
+            "term": "*****ing",
+            "replace": "bitch"
         }
 ],
     "game": [
         {
             "title": "call of duty",
-            "term": []
+            "terms": []
+        },
+        {
+            "title": "everquest",
+            "terms": ["eq"]
         }
 
     ]
