@@ -1,24 +1,25 @@
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap, convert::TryFrom};
 use url::{ParseError, Url};
 
-use crate::options::{Filter, ReviewType};
+use crate::{
+    error::RevApiError,
+    options::{Filter, PurchaseType, ReviewType},
+};
 
-const STEAM_REV_API: &'static str = "https://store.steampowered.com/appreviews/";
+const STEAM_REV_API: &str = "https://store.steampowered.com/appreviews/";
 
 /// State information/builder for the Steam review A.P.I.
 ///
 /// https://partner.steamgames.com/doc/store/getreviews
 #[derive(Debug)]
-pub struct ReviewApi<'c> {
+pub struct ReviewApi<'val> {
     /// Stores query pairs as key, value to parse with the url crate.
-    query: HashMap<&'static str, &'c str>,
+    query: HashMap<&'static str, Cow<'val, str>>,
     /// Steam product's `appid`. May be found on each store page.
     appid: u32,
-    /// Cursor to facilitate pagination.
-    cursor: &'c str,
 }
 
-impl<'c> ReviewApi<'c> {
+impl<'val> ReviewApi<'val> {
     /// Construct a builder with an `appid`.
     ///
     /// Each product on Steam has an `appid` which is available via the associated
@@ -36,16 +37,20 @@ impl<'c> ReviewApi<'c> {
         let mut api = Self {
             query: HashMap::new(),
             appid,
-            cursor: "*",
         };
 
         // Set defaults
         let (key_json, val_json) = ReviewApi::add_json();
-        api.query.insert(key_json, val_json);
+        api.query.insert(key_json, val_json.into());
         let (key_lang, val_lang) = ReviewApi::add_language();
-        api.query.insert(key_lang, val_lang);
+        api.query.insert(key_lang, val_lang.into());
         // Default to querying by recency for pagination.
-        api.filter(Filter::Recent);
+        api.filter(Filter::Recent).expect(
+            "Unexpected: Changing the filter to Recent shouldn't cause an error in the ctor.",
+        );
+        // Add default cursor
+        api.change_cursor("*")
+            .expect("Unexpected: Impossible to fail via an invalid Filter here.");
 
         api
     }
@@ -88,19 +93,95 @@ impl<'c> ReviewApi<'c> {
     ///
     /// The Steam API allows requesting review data in a specific order such as most helpful,
     /// recency, or last updated. Valve recommends `Filter::Recent` or `Filter::Updated`
-    /// for pagination.
+    /// for pagination. Setting a day range requires `Filter::All`.
     ///
-    /// The default is `Filter::All` as per the API. Leaving this unset will default to
+    /// Valve's default is `Filter::All` as per the API. Leaving this unset will default to
     /// `Filter::Recent` to help pagination, however.
-    pub fn filter(&mut self, filt: Filter) -> &mut Self {
+    ///
+    /// ## Note on multiple calls
+    /// This functions overwrites any previously set Filter.
+    ///
+    /// ## Errors
+    /// Invalid API states, such trying to set a `Filter::All` when a Cursor exists,
+    /// returns an error.
+    pub fn filter(&mut self, filt: Filter) -> Result<&mut Self, RevApiError> {
         use Filter::*;
-        self.query.entry("filter").insert(filt.as_str());
-        self
+        use RevApiError::*;
+        match filt {
+            // "*" is the default cursor. Thus, fail on any other cursor for All.
+            All if self.query.get("cursor").expect("Cursor is always present.") != "*" => {
+                Err(InvalidFilterCursor)
+            }
+            // Only All is valid for day_range.
+            Recent | Updated if self.query.contains_key("day_range") => Err(InvalidFilterDayRange),
+            _ => {
+                self.query.entry("filter").insert(filt.as_str().into());
+                Ok(self)
+            }
+        }
+    }
+
+    pub fn day_range(&mut self, days_ago: u32) -> Result<&mut Self, RevApiError> {
+        match &**self
+            .query
+            .get("filter")
+            .expect("Unexpected: Filter is always set so you shouldn't see this message")
+        {
+            "all" => {
+                self.query
+                    .entry("day_range")
+                    .insert(days_ago.to_string().into());
+                Ok(self)
+            }
+            "recent" | "updated" => Err(RevApiError::InvalidFilterDayRange),
+            bad => unreachable!(
+                concat!(
+                    "Unexpected: The stored query string for Filter can't be ",
+                    "anything other than the variants. Got: {}"
+                ),
+                bad
+            ),
+        }
+    }
+
+    pub fn change_cursor(&mut self, new_cursor: &'val str) -> Result<&mut Self, RevApiError> {
+        match &**self
+            .query
+            .get("filter")
+            .expect("Unexpected: Filter is always set so you shouldn't see this message.")
+        {
+            // I feel dirty matching on str. Implementing a function to convert &str to Filter seems
+            // comparably worse though.
+            "all" => Err(RevApiError::InvalidFilterCursor),
+            "recent" | "updated" => {
+                self.query.entry("cursor").insert(new_cursor.into());
+                Ok(self)
+            }
+            // The API doesn't expose the internal HashMap so this shouldn't happen.
+            // I could just match on _ and ignore "all", but I'd rather catch if this implodes somehow.
+            bad => unreachable!(
+                concat!(
+                    "Unexpected: The stored query string for Filter can't be ",
+                    "anything other than the variants. Got: {}"
+                ),
+                bad
+            ),
+        }
     }
 
     pub fn review_type(&mut self, rev_type: ReviewType) -> &mut Self {
-        use ReviewType::*;
-        self.query.entry("review_type").insert(rev_type.as_str());
+        // Note: ReviewType -> &'static str -> Cow
+        self.query
+            .entry("review_type")
+            .insert(rev_type.as_str().into());
+        self
+    }
+
+    pub fn purchase_type(&mut self, purchase: PurchaseType) -> &mut Self {
+        // Note: PurchaseType -> &'static str -> Cow
+        self.query
+            .entry("purchase_type")
+            .insert(purchase.as_str().into());
         self
     }
 
@@ -113,14 +194,51 @@ impl<'c> ReviewApi<'c> {
         let base_query = Url::join(&steam_base, &app_id)
             .expect("Unexpected: Joining the Steam A.P.I. and App ID should succeed.");
 
-        Ok(Url::parse_with_params(
-            &base_query.as_str(),
-            self.query.iter(),
-        )?)
+        Url::parse_with_params(&base_query.as_str(), self.query.iter())
+    }
+}
+
+impl TryFrom<&ReviewApi<'_>> for Url {
+    type Error = ParseError;
+
+    fn try_from(value: &ReviewApi) -> Result<Url, Self::Error> {
+        value.build()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn build_with_cursor() {
+        let mut steam = ReviewApi::new(1235140);
+        steam
+            .review_type(ReviewType::All)
+            .filter(Filter::Updated)
+            .expect("Unexpected: Setting Filter::Recent.")
+            .change_cursor("lol!meow@cats$")
+            .expect("Unexpected: Filter is All for some reason?")
+            .review_type(ReviewType::All)
+            .purchase_type(PurchaseType::All);
+        let built_api = steam.build().expect("You broke build(), Josh.");
+    }
+
+    #[test]
+    fn cursor_default_filter() {
+        let built_api = ReviewApi::new(21690)
+            .change_cursor("koolfakecursor")
+            .expect("Unexpected: Filter is All for some reason?")
+            .build()
+            .expect("Yay build() is broken now!");
+    }
+
+    #[test]
+    fn cursor_filter_all() {
+        let built_api = ReviewApi::new(584400)
+            .change_cursor("dontpanikherepls")
+            .expect("Unexpected: Filter is All before I set it to All!!")
+            .filter(Filter::All)
+            .expect_err("Setting filter to All with a cursor didn't return an error.");
+    }
 }

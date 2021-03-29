@@ -141,6 +141,21 @@ def normalize_words(reviews):
                                                           "fuck",
                                                           regex=True)
 
+    # Replace emoticons.
+    # Admittedly these are in the "write once" and unreadable categories
+    # of code.
+    smiles = r"(\:\)|\:D|=\)|=D)"
+    reviews.user_review = reviews.user_review.str.replace(smiles,
+                                                          "smile",
+                                                          regex=True)
+
+    sad = r"(\:\(|=\(|\:\-\()"
+    reviews.user_review = reviews.user_review.str.replace(sad,
+                                                          "sad",
+                                                          regex=True)
+
+    # The JSON has lists of terms to clean that would be too verbose and
+    # ugly to include in the code here.
     with open("cleanup.json", 'r') as cleanup_file:
         cleanup = json.load(cleanup_file)
 
@@ -150,7 +165,8 @@ def normalize_words(reviews):
         for rep in cleanup["generic"]:
             reviews.user_review = reviews.user_review.str.replace(rep["term"],
                                                                   rep["replace"],
-                                                                  case=False)
+                                                                  case=False,
+                                                                  regex=True)
 
         # Games (or series) may their own acronyms or jargon to replace.
         # This is woefully incomplete.
@@ -162,7 +178,8 @@ def normalize_words(reviews):
                 reviews.loc[mask, "user_review"] =\
                     reviews[mask].user_review.str.replace(term,
                                                           rep,
-                                                          case=False)
+                                                          case=False,
+                                                          regex=True)
 
 
 def load(path):

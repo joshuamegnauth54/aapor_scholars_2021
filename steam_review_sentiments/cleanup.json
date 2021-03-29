@@ -5,11 +5,11 @@
             "replace": "multiplayer online battle arena"
         },
         {
-            "term": "fps",
+            "term": "(?<![\\w])fps(?![\\w])",
             "replace": "shooter"
         },
         {
-            "term": "tps",
+            "term": "(?<![\\w])tps(?![\\w])",
             "replace": "shooter"
         },
         {
@@ -29,7 +29,7 @@
             "replace": "downloadable content"
         },
         {
-            "term": "vr",
+            "term": "(?<![\\w])vr(?![\\w])",
             "replace": "virtual reality"
         },
         {
@@ -41,7 +41,7 @@
             "replace": "player versus player"
         },
         {
-            "term": "mmo",
+            "term": "(?<![\\w])mmo",
             "replace": "massively multiplayer online"
         },
         {
@@ -67,6 +67,22 @@
         {
             "term": "arpg",
             "replace": "action role playing game"
+        },
+        {
+            "term": "ps(x|1|2|3|4|5)",
+            "replace": "playstation"
+        },
+        {
+            "term": "xbox (360|one|series x){0,}",
+            "replace": "xbox "
+        },
+        {
+            "term": "x360|xbone|x box|x-box|x_box",
+            "replace": "xbox"
+        },
+        {
+            "term": "peeps",
+            "replace": "people"
         },
         {
             "term": "fck",
@@ -97,6 +113,10 @@
             "replace": "shit"
         },
         {
+            "term": "sh17",
+            "replace": "shit"
+        },
+        {
             "term": "btch",
             "replace": "bitch"
         },
@@ -107,12 +127,20 @@
         {
             "term": "*****ing",
             "replace": "bitch"
+        },
+        {
+            "term": "a$$",
+            "replace": "ass"
+        },
+        {
+            "term": "booba",
+            "replace": "boobs"
         }
 ],
     "game": [
         {
             "title": "call of duty",
-            "terms": []
+            "terms": ["ww"]
         },
         {
             "title": "everquest",
