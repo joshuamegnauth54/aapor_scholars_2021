@@ -37,7 +37,7 @@ def support_vector_cv(X_train, y_train):
     return RandomizedSearchCV(SVC(cache_size=512, random_state=42),
                               params,
                               n_jobs=-1,
-                              predispatch=8,
+                              pre_dispatch=8,
                               random_state=42).fit(X_train, y_train)
 
 

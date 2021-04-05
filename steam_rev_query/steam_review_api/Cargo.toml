@@ -1,6 +1,6 @@
 [package]
 name = "steam_review_api"
-version = "0.1.0"
+version = "0.4.0"
 authors = ["Joshua Megnauth"]
 edition = "2018"
 
@@ -8,3 +8,8 @@ edition = "2018"
 
 [dependencies]
 url = "^2.2.1"
+serde = {version = "^1.0.124", features = ["derive"], optional = true}
+serde_json = {version = "^1.0.64", optional = true}
+
+[features]
+convenience_structs = ["serde", "serde_json"]

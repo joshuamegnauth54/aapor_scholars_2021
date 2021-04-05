@@ -4,6 +4,7 @@ from scipy.sparse.csr import csr_matrix
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.model_selection import train_test_split
 
+
 def check_correct(X):
     if not isinstance(X, csr_matrix):
         raise ValueError("Yeah, so, you probably passed in the dense matrix "
@@ -106,6 +107,19 @@ def tfidf_transform(X_train, X_test, max_features=None):
     return X_train_tfidf, X_test_tfidf, tfidf
 
 
+def predict(nlp, tfidf, model, new_data):
+    if not isinstance(new_data, (list, np.ndarray)):
+        raise ValueError("The new_data parameter should be a list.")
+
+    # Process the data with our spaCy Language object.
+    X_new = np.array([nlp(data) for data in new_data])
+    # And transform with the Tf-Idf fit on the training data.
+    X_new = tfidf.transform(X_new)
+
+    return model.predict(X_new)
+
+
 def vocab_counts(tfidf):
+    """Fix later."""
     inverse = {count: term for (term, count) in tfidf.vocabulary_.items()}
     return []

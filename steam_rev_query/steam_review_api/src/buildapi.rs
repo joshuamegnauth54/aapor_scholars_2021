@@ -31,6 +31,8 @@ impl<'val> ReviewApi<'val> {
     ///
     /// ## Example
     /// ```rust
+    /// use steam_review_api::ReviewApi;
+    ///
     /// let mut builder = ReviewApi::new(413410);
     /// ```
     pub fn new(appid: u32) -> Self {
@@ -65,11 +67,15 @@ impl<'val> ReviewApi<'val> {
     ///
     /// ## Examples
     /// ```rust
+    /// use steam_review_api::ReviewApi;
+    ///
     /// let mut builder = ReviewApi::new(379720);
     /// builder.appid(2280);
     /// ```
     ///
     /// ```rust
+    /// use steam_review_api::ReviewApi;
+    ///
     /// let mut builder = ReviewApi::new(460790);
     /// // 0 is an invalid appid, but we don't check!
     /// builder.appid(0);
@@ -185,6 +191,50 @@ impl<'val> ReviewApi<'val> {
         self
     }
 
+    /// Set a maximum number of results per page up to 100.
+    ///
+    /// ## Note on maximum
+    /// This function does not raise an error if `amount` > 100.
+    /// Steam's review API returns the maximum rather than fails if
+    /// a large `num_per_page` is passed in.
+    ///
+    /// ## Default
+    /// Defaults to 20 via the API if unset.
+    ///
+    /// ## Overwrite
+    /// This function overwrites any previously set `num_per_page`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// use steam_review_api::ReviewApi;
+    ///
+    /// let mut builder = ReviewApi::new(374320);
+    /// builder.num_per_page(100);
+    /// ```
+    pub fn num_per_page(&mut self, amount: u8) -> &mut Self {
+        self.query
+            .entry("num_per_page")
+            .insert(amount.to_string().into());
+        self
+    }
+
+    /// Build a query into a Url.
+    ///
+    /// ## Errors
+    /// Internal parsing errors return a ParseError.
+    /// Nothing should actually cause a ParseError, but the function
+    /// returns `Result` just in case. ParseErrors should be reported.
+    ///
+    /// ## Example
+    /// ```rust
+    /// use steam_review_api::{PurchaseType, ReviewApi};
+    ///
+    /// let query = ReviewApi::new(227600)
+    ///     .purchase_type(PurchaseType::All)
+    ///     .num_per_page(100)
+    ///     .build()
+    ///     .unwrap();
+    /// ```
     pub fn build(&self) -> Result<Url, ParseError> {
         // STEAM_REV_API is valid so this shouldn't fail.
         let steam_base = Url::parse(STEAM_REV_API)
@@ -221,12 +271,12 @@ mod tests {
             .expect("Unexpected: Filter is All for some reason?")
             .review_type(ReviewType::All)
             .purchase_type(PurchaseType::All);
-        let built_api = steam.build().expect("You broke build(), Josh.");
+        let _built_api = steam.build().expect("You broke build(), Josh.");
     }
 
     #[test]
     fn cursor_default_filter() {
-        let built_api = ReviewApi::new(21690)
+        let _built_api = ReviewApi::new(21690)
             .change_cursor("koolfakecursor")
             .expect("Unexpected: Filter is All for some reason?")
             .build()
@@ -235,10 +285,20 @@ mod tests {
 
     #[test]
     fn cursor_filter_all() {
-        let built_api = ReviewApi::new(584400)
+        let _built_api = ReviewApi::new(584400)
             .change_cursor("dontpanikherepls")
             .expect("Unexpected: Filter is All before I set it to All!!")
             .filter(Filter::All)
             .expect_err("Setting filter to All with a cursor didn't return an error.");
+    }
+
+    #[test]
+    fn days_range_correct() {
+        let _built_api = ReviewApi::new(311690)
+            .filter(Filter::All)
+            .expect("Unexpected: Changing the Filter right after constructing shouldn't raise an error.")
+            .day_range(365)
+            .expect("Filter is set to All yet day_range() failed.")
+            .build().expect("I broke build().");
     }
 }

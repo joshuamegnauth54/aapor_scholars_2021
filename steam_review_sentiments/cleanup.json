@@ -5,6 +5,10 @@
             "replace": "multiplayer online battle arena"
         },
         {
+            "term": "(?![\\d])\\s*fps",
+            "replace": " frames per second"
+        },
+        {
             "term": "(?<![\\w])fps(?![\\w])",
             "replace": "shooter"
         },
@@ -39,6 +43,34 @@
         {
             "term": "pvp",
             "replace": "player versus player"
+        },
+        {
+            "term": "f2p|free-to-play",
+            "replace": "free to play"
+        },
+        {
+            "term": "p2w|pay-to-win",
+            "replace": "pay to win"
+        },
+        {
+            "term": "★[☆*]",
+            "replace": "one star"
+        },
+        {
+            "term": "★★[☆*]",
+            "replace": "two star"
+        },
+        {
+            "term": "★★★[☆*]",
+            "replace": "three star"
+        },
+        {
+            "term": "★★★★[☆*]",
+            "replace": "four star"
+        },
+        {
+            "term": "★★★★★[☆*]",
+            "replace": "five star"
         },
         {
             "term": "(?<![\\w])mmo",
@@ -81,8 +113,68 @@
             "replace": "xbox"
         },
         {
+            "term": "1st",
+            "replace": "first"
+        },
+        {
+            "term": "2nd",
+            "replace": "second"
+        },
+        {
+            "term": "3rd",
+            "replace": "third"
+        },
+        {
+            "term": "4th",
+            "replace": "fourth"
+        },
+        {
+            "term": "(?<![\\w])vs(?![\\w])",
+            "replace": "versus"
+        },
+        {
+            "term": "goty",
+            "replace": "game of the year"
+        },
+        {
+            "term": "lvl",
+            "replace": "level"
+        },
+        {
+            "term": "tcg",
+            "replace": "trading card game"
+        },
+        {
+            "term": "npc",
+            "replace": "non playable character"
+        },
+        {
+            "term": "pc",
+            "replace": "computer"
+        },
+        {
             "term": "peeps",
             "replace": "people"
+        },
+        {
+            "term": "rulez",
+            "replace": "rules"
+        },
+        {
+            "term": "ownz",
+            "replace": "owns"
+        },
+        {
+            "term": "asap|asapps|asaps",
+            "replace": "as soon as possible"
+        },
+        {
+            "term": "lo*l",
+            "replace": "lol"
+        },
+        {
+            "term": "qeue|queu",
+            "replace": "queue"
         },
         {
             "term": "fck",
