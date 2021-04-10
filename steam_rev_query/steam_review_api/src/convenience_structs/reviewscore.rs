@@ -29,7 +29,7 @@ impl std::error::Error for ReviewScoreParseError {}
 
 impl Display for ReviewScoreParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "You should NOT see this error unless Valve changed their review descriptions. Please report this issue.")
+        write!(f, "You should NOT see this error unless Valve changed their review descriptions. Please report this issue on GitHub.")
     }
 }
 
@@ -60,6 +60,18 @@ impl Display for ReviewScore {
 impl FromStr for ReviewScore {
     type Err = ReviewScoreParseError;
 
+    /// Convert string slice to ReviewScore.
+    ///
+    /// You probably don't need to parse anything yourself.
+    /// ReviewScore and the associated FromStr implementation are to help deserialization
+    /// and save memory while doing so.
+    ///
+    /// ## Errors
+    /// All nine of Steam's review classes are exhaustively covered by ReviewScore.
+    /// Thus, parsing shouldn't cause an error unless:
+    /// * the caller specifically parses a value not covered
+    /// * Steam returns junk data somehow
+    /// * Valve adds new review levels.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use ReviewScore::*;
         match s {
@@ -82,9 +94,7 @@ impl<'de> Deserialize<'de> for ReviewScore {
     where
         D: Deserializer<'de>,
     {
-        let value: &str = Deserialize::deserialize(deserializer)?;
-        value
-            .parse::<ReviewScore>()
-            .map_err(D::Error::custom)
+        let value: String = Deserialize::deserialize(deserializer)?;
+        value.parse::<ReviewScore>().map_err(D::Error::custom)
     }
 }

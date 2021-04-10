@@ -2,6 +2,10 @@ use attohttpc::{self, Result};
 use steam_review_api::convenience_structs::*;
 use steam_review_api::*;
 
+const fn user_agent() -> &'static str {
+    concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"))
+}
+
 pub fn test() -> Result {
     let mut steam = ReviewApi::new(1235140);
     steam
@@ -13,7 +17,9 @@ pub fn test() -> Result {
 
     println!("{}", built_api);
     // SET HEADERS LATER
-    let to_send = attohttpc::get(built_api).header_append("user-agent", "Josh scraper test alpha");
+    let to_send = attohttpc::get(built_api)
+        .try_header_append("User-Agent", user_agent())
+        .expect("Oops.");
     let resp = to_send.send()?;
     //println!("{:?}", to_send);
 

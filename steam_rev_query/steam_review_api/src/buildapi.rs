@@ -3,6 +3,7 @@ use url::{ParseError, Url};
 
 use crate::{
     error::RevApiError,
+    language::Language,
     options::{Filter, PurchaseType, ReviewType},
 };
 
@@ -44,7 +45,7 @@ impl<'val> ReviewApi<'val> {
         // Set defaults
         let (key_json, val_json) = ReviewApi::add_json();
         api.query.insert(key_json, val_json.into());
-        let (key_lang, val_lang) = ReviewApi::add_language();
+        let (key_lang, val_lang) = ReviewApi::add_language(Language::English);
         api.query.insert(key_lang, val_lang.into());
         // Default to querying by recency for pagination.
         api.filter(Filter::Recent).expect(
@@ -86,13 +87,14 @@ impl<'val> ReviewApi<'val> {
     }
 
     /// Return JSON from the API. Not settable by callers.
-    fn add_json() -> (&'static str, &'static str) {
+    #[inline]
+    const fn add_json() -> (&'static str, &'static str) {
         ("json", "1")
     }
 
     /// Request reviews in a specific language. Currently not settable via my implementation.
-    fn add_language() -> (&'static str, &'static str) {
-        ("language", "english")
+    fn add_language(lang: Language) -> (&'static str, &'static str) {
+        ("language", lang.as_str())
     }
 
     /// Return results in a specific order such as by most recent.

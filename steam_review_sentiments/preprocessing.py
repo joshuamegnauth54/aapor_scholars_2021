@@ -144,7 +144,7 @@ def normalize_words(reviews):
     # Replace emoticons.
     # Admittedly these are in the "write once" and unreadable categories
     # of code.
-    smiles = r"(\:\)|\:D|=\)|=D)"
+    smiles = r"(\:\)|\:D|=\)|=D|☺|☻)"
     reviews.user_review = reviews.user_review.str.replace(smiles,
                                                           "smile",
                                                           regex=True)

@@ -17,10 +17,6 @@
             "replace": "shooter"
         },
         {
-            "term": "♥",
-            "replace": "heart"
-        },
-        {
             "term": "™",
             "replace": "trademark"
         },
@@ -89,15 +85,15 @@
             "replace": "massively multiplayer online role playing game"
         },
         {
-            "term": "jrpg",
+            "term": "jrpg|j-rpg",
             "replace": "japanese role playing game"
         },
         {
-            "term": "wrpg",
+            "term": "wrpg|w-rpg",
             "replace": "western role playing game"
         },
         {
-            "term": "arpg",
+            "term": "arpg|a-rpg",
             "replace": "action role playing game"
         },
         {
@@ -149,8 +145,16 @@
             "replace": "non playable character"
         },
         {
-            "term": "pc",
+            "term": "pc|pc-",
             "replace": "computer"
+        },
+        {
+            "term": "charakter",
+            "replace": "character"
+        },
+        {
+            "term": "loote",
+            "replace": "loot"
         },
         {
             "term": "peeps",
@@ -159,6 +163,10 @@
         {
             "term": "rulez",
             "replace": "rules"
+        },
+        {
+            "term": "tl;dr",
+            "replace": "tldr"
         },
         {
             "term": "ownz",
@@ -177,66 +185,68 @@
             "replace": "queue"
         },
         {
-            "term": "fck",
+            "term": "anyways|anywayz",
+            "replace": "anyway"
+        },
+        {
+            "term": "jack-in-the-box",
+            "replace": "jack in the box"
+        },
+        {
+            "term": "cashgrab",
+            "replace": "cash grab"
+        },
+        {
+            "term": "trashgame",
+            "replace": "trash game"
+        },
+        {
+            "term": "don't|(?<![\\w])dont(?![\\w])",
+            "replace": "do not"
+        },
+        {
+            "term": "(?<![\\w]alot(?![\\w])",
+            "replace": "a lot"
+        },
+        {
+            "term": "fck|f**k|f***|****ing|fuc|fuk|fck|****er|f♥♥k|f♥♥♥|♥♥♥♥ing",
             "replace": "fuck"
         },
         {
-            "term": "f**k",
-            "replace": "fuck"
-        },
-        {
-            "term": "f***",
-            "replace": "fuck"
-        },
-        {
-            "term": "****ing",
-            "replace": "fuck"
-        },
-        {
-            "term": "fuc",
-            "replace": "fuck"
-        },
-        {
-            "term": "sht",
+            "term": "(?<![\\w])sht(?![\\w])",
             "replace": "shit"
         },
         {
-            "term": "s**t",
+            "term": "s**t|s♥♥t|sh17|s***|s♥♥♥",
             "replace": "shit"
         },
         {
-            "term": "sh17",
-            "replace": "shit"
-        },
-        {
-            "term": "btch",
+            "term": "btch|*****|♥♥♥♥♥|*****ing|♥♥♥♥♥ing",
             "replace": "bitch"
         },
         {
-            "term": "*****",
-            "replace": "bitch"
-        },
-        {
-            "term": "*****ing",
-            "replace": "bitch"
-        },
-        {
-            "term": "a$$",
+            "term": "a$$|a**|a♥♥",
             "replace": "ass"
         },
         {
             "term": "booba",
             "replace": "boobs"
+        },
+        {
+            "term": "♥",
+            "replace": "heart"
         }
 ],
     "game": [
         {
             "title": "call of duty",
-            "terms": ["ww"]
+            "terms": ["ww"],
+            "replace": ["world war "]
         },
         {
             "title": "everquest",
-            "terms": ["eq"]
+            "terms": ["eq"],
+            "replace": ["everquest"]
         }
 
     ]

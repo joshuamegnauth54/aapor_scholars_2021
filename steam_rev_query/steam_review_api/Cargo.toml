@@ -1,6 +1,6 @@
 [package]
 name = "steam_review_api"
-version = "0.4.0"
+version = "0.6.0"
 authors = ["Joshua Megnauth"]
 edition = "2018"
 

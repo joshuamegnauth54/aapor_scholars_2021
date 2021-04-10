@@ -3,6 +3,7 @@ import numpy as np
 from scipy.sparse.csr import csr_matrix
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.model_selection import train_test_split
+from sklearn.decomposition import LatentDirichletAllocation
 
 
 def check_correct(X):
@@ -29,7 +30,8 @@ def token_check(token, stop):
         True if token shouldn't be dropped.
     """
     return token.ent_type_ == "WORK_OF_ART" or not (token.is_punct or
-                                                    token.is_stop and stop)
+                                                    token.is_stop and stop or
+                                                    not token.is_ascii)
 
 
 def transform_string(doc, no_stop=True):
@@ -121,5 +123,47 @@ def predict(nlp, tfidf, model, new_data):
 
 def vocab_counts(tfidf):
     """Fix later."""
-    inverse = {count: term for (term, count) in tfidf.vocabulary_.items()}
+    _inverse = {count: term for (term, count) in tfidf.vocabulary_.items()}
     return []
+
+
+def topic_modeling(docs, max_features=None, max_topics=10, top_topics=10):
+
+    if not isinstance(docs, (list, np.ndarray)):
+        raise ValueError("The docs parameter should be a list.")
+    if not isinstance(docs[0], spacy.tokens.Doc):
+        raise ValueError("The docs parameter should contain spaCy Docs.")
+
+    # CountVectorizer is used as my BoW model here despite Gensim having
+    # more robust utilities. The reason? Laziness.
+    # I'm using a higher min_df here since I'm not really building a model.
+    vectorizer = CountVectorizer(strip_accents="unicode",
+                                 preprocessor=null_preproc,
+                                 tokenizer=transform_string,
+                                 token_pattern=None,
+                                 ngram_range=(1, 3),
+                                 min_df=2,
+                                 max_features=max_features)
+
+    # Transform into sparse array
+    docs_mat = vectorizer.fit_transform(docs)
+
+    # Finally, fit the model and return some topics!
+    lda = LatentDirichletAllocation(n_components=max_topics,
+                                    n_jobs=-1,
+                                    random_state=42).fit(docs_mat)
+
+    # Can't think of a better way to do this.
+    # The features are stored in a List but converting the List to an ndarray
+    # leads to a massive consumption of memory.
+    # I'm sure get_feature_names() isn't returning a copy each time, right?
+    features = vectorizer.get_feature_names()
+    topics = np.empty(10, np.ndarray)
+
+    for idx, component in enumerate(lda.components_):
+        # Sort and get top_topics indices
+        indices = component.argsort(-top_topics:)
+        # (See above). Features is a List so I can't use fancy indexing.
+        topics[idx] = np.array([features[i] for i in indices])
+
+    return topics

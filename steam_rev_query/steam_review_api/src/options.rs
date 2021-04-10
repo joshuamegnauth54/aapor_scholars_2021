@@ -48,11 +48,17 @@ impl Default for Filter {
     }
 }
 
+/// Whether to return only reviews from users who purchased the title from Steam
+/// (default), storefronts other than Steam, or both.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PurchaseType {
+    /// Return all reviews.
     All,
+    /// Returns reviews from games received elsewhere but unlocked on Steam.
+    /// For example, Humble Bundle or GOG.
     NonSteamPurchase,
+    /// Return reviews from users who bought the game on Steam.
     Steam,
 }
 
@@ -68,6 +74,7 @@ impl PurchaseType {
 }
 
 impl Default for PurchaseType {
+    /// Steam defaults to PurchaseType::Steam.
     fn default() -> Self {
         PurchaseType::Steam
     }
