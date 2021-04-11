@@ -51,6 +51,7 @@ pub struct Review {
     pub voted_up: bool,
     pub votes_up: u32,
     pub votes_funny: u32,
+    #[serde(deserialize_with = "wvs_to_float")]
     pub weighted_vote_score: f64,
     pub comment_count: u32,
     pub steam_purchase: bool,
@@ -87,4 +88,28 @@ where
         // sense.
         Ok(false)
     }
+}
+
+// Converts weighted_vote_score (String) to f64
+fn wvs_to_float<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // Steam's API returns either a String or 0 for weighted_vote_score.
+    // 0 is an integer rather than a float and the String holds a float.
+    // But we want a f64 to save memory instead of a String of course.
+    Deserialize::deserialize(deserializer)
+        // Return Ok(0.) if deserialization fails (i.e. if we get a u8 instead)
+        // of a String back.
+        // Otherwise, pass on the Result from parse.
+        .map_or(Ok(0.), |value: String| value.parse::<f64>())
+        // Return the successfully parsed f64 OR 0.0 if it failed
+        // for some reason. This is consistent with the API returning
+        // 0 but as a f64 instead.
+        .or(Ok(0.))
+}
+
+#[cfg(test)]
+mod tests {
+
 }

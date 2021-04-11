@@ -244,4 +244,10 @@ mod tests {
         let english: StringDeserializer<Error> = "english".to_owned().into_deserializer();
         assert_eq!(Language::deserialize(english), Ok(Language::English));
     }
+
+    #[test]
+    fn bad_parse() {
+        let cat_lang: StringDeserializer<Error> = "meow talk".to_owned().into_deserializer();
+        let _err = Language::deserialize(cat_lang).unwrap_err();
+    }
 }

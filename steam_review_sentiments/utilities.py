@@ -36,8 +36,28 @@ def token_check(token, stop):
 
 def transform_string(doc, no_stop=True):
     """Transform a single string using spaCy."""
+    # Not checking the types here because it'd fail with a reasonable
+    # error message regardless.
     return np.array([t.lemma_.lower().strip() for t in doc
                      if token_check(t, no_stop)])
+
+
+def transform_all(docs):
+    """Transform a list of spaCy Docs to preclude punctuation, stop words."""
+    return np.array([transform_string(doc) for doc in docs],
+                    dtype=np.object)
+
+
+def tokenize_text(text, vectorizer, null_idx):
+    return np.array([vectorizer.vocabulary_.get(word, null_idx)
+                     for word in text])
+
+
+def tokenize_all(texts, vectorizer, null_idx):
+    if not isinstance(texts, (np.ndarray, list)):
+        raise ValueError("Texts should be a nested array of strings.")
+    if not isinstance(texts[0][0], str):
+        raise ValueError("Texts should hold strings in each array.")
 
 
 def null_preproc(doc):

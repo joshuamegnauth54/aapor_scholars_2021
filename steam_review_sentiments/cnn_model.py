@@ -10,14 +10,17 @@ from utilities import null_preproc, transform_string
 
 def get_embeddings(nlp, X_train, X_test):
 
+    # CountVectorizer counts each word/token, so I can use it to extract
+    # ONLY the vectors present in my data from spaCy's pretrained embeddings.
     vectorizer = CountVectorizer(strip_accents="unicode",
                                  preprocessor=null_preproc,
                                  tokenizer=transform_string,
                                  token_pattern=None).fit(X_train)
     # The vocabulary size only consists of the terms that appear after
-    # Tf-Idf. This is our first dimension.
-    vocab_size = len(vectorizer.get_feature_names())
-    # Length of the pre-trained word embeddings vector
+    # vectorizing. This is our first dimension.
+    # Element length + 1 is a stand in for non
+    vocab_size = len(vectorizer.get_feature_names()) + 1
+    # Length of the pre-trained word embeddings vector (300 most likely)
     vec_size = nlp.vocab.vectors_length
     # Finally, initialize a zero length ndarray with the sizes.
     embeddings = np.zeros((vocab_size, vec_size), dtype=np.float32)
@@ -28,7 +31,7 @@ def get_embeddings(nlp, X_train, X_test):
     # value = vectorizer.get_feature_names()[index]
     # value == "meow"
     for word, i in vectorizer.vocabulary_.items():
-        # print(f"word: {word}, index: {i}")
+        # Can't index with NumPy strings.
         embeddings[i] = nlp.vocab[str(word)].vector
 
     return embeddings

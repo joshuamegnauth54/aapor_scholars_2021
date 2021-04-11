@@ -205,6 +205,18 @@
             "replace": "do not"
         },
         {
+            "term": "(?<![\\w])u(?![\\w])",
+            "replace": "you"
+        },
+        {
+            "term": "(?<![\\w])ur(?![\\w])",
+            "replace": "your"
+        },
+        {
+            "term": "(?<![\\w])r(?![\\w])",
+            "replace": "are"
+        },
+        {
             "term": "(?<![\\w]alot(?![\\w])",
             "replace": "a lot"
         },
