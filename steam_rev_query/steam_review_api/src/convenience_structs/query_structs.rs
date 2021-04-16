@@ -1,6 +1,6 @@
 use super::{conv_newtypes::*, reviewscore::ReviewScore};
 use crate::language::Language;
-use serde::{Deserialize, Deserializer};
+use serde::{de::Error, Deserialize, Deserializer};
 
 /// Summary of the query as a whole as well as data on the game such as total amount of reviews.
 /// Only `num_reviews` is present across multiple queries. `review_score_desc` et cetera are only
@@ -25,7 +25,8 @@ pub struct ReviewQuerySum {
 #[derive(Debug, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ReviewAuthor {
     /// Reviewer's SteamID64. See [this link](https://developer.valvesoftware.com/wiki/SteamID) for info.
-    pub steamid: String,
+    #[serde(deserialize_with = "str_to_uint")]
+    pub steamid: u64,
     /// Reviewer's total amount of owned titles.
     pub num_games_owned: u32,
     /// Reviewer's total posted reviews.
@@ -42,7 +43,8 @@ pub struct ReviewAuthor {
 
 #[derive(Debug, Deserialize, PartialEq, PartialOrd)]
 pub struct Review {
-    pub recommendationid: String,
+    #[serde(deserialize_with = "str_to_uint")]
+    pub recommendationid: u64,
     pub author: ReviewAuthor,
     pub language: Language,
     pub review: String,
@@ -66,9 +68,24 @@ pub struct SteamRevOuter {
     /// Did the query succeed? NOTE: Don't rely on this to actually indicate success.
     #[serde(deserialize_with = "success_to_bool")]
     pub success: bool,
+    /// Summary of current query such as how many reviews were pulled.
     pub query_summary: ReviewQuerySum,
+    /// The `cursor` references the next page of information. Pass `cursor` into
+    /// [ReviewApi::change_cursor] to paginate your current query.
     pub cursor: String,
+    /// Reviews scraped.
     pub reviews: Vec<Review>,
+}
+
+// Converts Steam ID and recommendation ID from Strings to u64s.
+// This should be fine as long as the API keeps returning
+// u64s.
+fn str_to_uint<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Deserialize::deserialize(deserializer)
+        .and_then(|value: String| value.parse::<u64>().map_err(D::Error::custom))
 }
 
 // Converts the success field into a bool.
@@ -111,5 +128,77 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
+    // Test the whole dang thing.
+    #[test]
+    fn deserialize_all() {
+        // Not real data. Based on actual output though.
+        let pretend_reviews = r#"
+        {
+            "success": 1,
+            "query_summary": {
+                "num_reviews": 2,
+                "review_score": 9,
+                "review_score_desc": "Overwhelmingly Positive",
+                "total_positive": 1337,
+                "total_negative": 2,
+                "total_reviews": 1339
+            },
+            "reviews": [
+                {
+                    "recommendationid": "TOTALLY_FAKE_REVIEW_BY_JOSH",
+                    "author": {
+                        "steamid": "0",
+                        "num_games_owned": 1,
+                        "num_reviews": 314,
+                        "playtime_forever": 14284256,
+                        "playtime_last_two_weeks": 20140,
+                        "playtime_at_review": 1052950,
+                        "last_played": 1618235983
+                    },
+                    "language": "english",
+                    "review": "This game is so amazing all I do is play it except for writing this review 😹",
+                    "timestamp_created": 1618161312,
+                    "timestamp_updated": 1618161312,
+                    "voted_up": true,
+                    "votes_up": 400,
+                    "votes_funny": 114,
+                    "weighted_vote_score": "0.56257367",
+                    "comment_count": 6,
+                    "steam_purchase": true,
+                    "received_for_free": false,
+                    "written_during_early_access": false
+                },
+                {
+                    "recommendationid": "TOTALLY_FAKE_REVIEW_LOLOL",
+                    "author": {
+                        "steamid": "0",
+                        "num_games_owned": 1400,
+                        "num_reviews": 428,
+                        "playtime_forever": 65248241,
+                        "playtime_last_two_weeks": 10300,
+                        "playtime_at_review": 5385919,
+                        "last_played": 1554491710
+                    },
+                    "language": "english",
+                    "review": "10/10 great combat great story pretty graphics meme123",
+                    "timestamp_created": 1585055110,
+                    "timestamp_updated": 1585055110,
+                    "voted_up": true,
+                    "votes_up": 65,
+                    "votes_funny": 2,
+                    "weighted_vote_score": 0,
+                    "comment_count": 1,
+                    "steam_purchase": true,
+                    "received_for_free": false,
+                    "written_during_early_access": false
+                }
+            ],
+            "cursor": "NOTAREALCURSOR"
+        }
+        "#;
+
+        let _parsed: SteamRevOuter = serde_json::from_str(pretend_reviews).unwrap();
+    }
 }

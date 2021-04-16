@@ -1,9 +1,11 @@
 import numpy as np
+import spacy
 
 from scipy.sparse.csr import csr_matrix
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import LatentDirichletAllocation
+from keras.preprocessing.sequence import pad_sequences
 
 
 def check_correct(X):
@@ -45,19 +47,54 @@ def transform_string(doc, no_stop=True):
 def transform_all(docs):
     """Transform a list of spaCy Docs to preclude punctuation, stop words."""
     return np.array([transform_string(doc) for doc in docs],
-                    dtype=np.object)
+                    dtype=np.ndarray)
 
 
 def tokenize_text(text, vectorizer, null_idx):
+    """Tokenize text into ints via vectorizer's vocabulary.
+
+    Parameters
+    ----------
+    text : Iterable[str]
+        Text to tokenize as an array of str.
+    vectorizer : CountVectorizer or TfidfVectorizer
+        Text vectorizer from sklearn.feature_extraction.text.
+    null_idx : uint
+        Index representing word not present in vocabulary.
+
+    Returns
+    -------
+    np.ndarray[np.uint32]
+        Tokenized text.
+    """
     return np.array([vectorizer.vocabulary_.get(word, null_idx)
-                     for word in text])
+                     for word in text],
+                    dtype=np.uint32)
 
 
-def tokenize_all(texts, vectorizer, null_idx):
+def tokenize_all(texts, vectorizer, null_idx, pad=True, max_text_len=None):
     if not isinstance(texts, (np.ndarray, list)):
         raise ValueError("Texts should be a nested array of strings.")
     if not isinstance(texts[0][0], str):
         raise ValueError("Texts should hold strings in each array.")
+
+    # Tokenize each text
+    texts_tokens = np.array([tokenize_text(text,
+                                           vectorizer,
+                                           null_idx) for text in texts],
+                            dtype=np.ndarray)
+
+    if pad:
+        # Length of longest text.
+        if not max_text_len:
+            max_text_len = len(max(texts_tokens, key=len))
+
+        # Pad text_tokens with null_idx.
+        texts_tokens = pad_sequences(texts_tokens,
+                                     maxlen=max_text_len,
+                                     value=null_idx)
+
+    return texts_tokens
 
 
 def null_preproc(doc):
@@ -66,7 +103,7 @@ def null_preproc(doc):
 
 
 def get_corpus(docs, no_stop=True):
-    """Transform docs into an ndarray of tokens per doc.
+    """Transform docs into an ndarray of lemmas per doc.
 
     Parameters
     ----------
@@ -78,7 +115,7 @@ def get_corpus(docs, no_stop=True):
     Returns
     -------
     corpus : np.ndarray[np.ndarray]
-        Documents.
+        Arrays of arrays of lemmas.
     """
     corpus = np.empty(len(docs), np.ndarray)
     for idx, doc in enumerate(docs):
@@ -88,6 +125,7 @@ def get_corpus(docs, no_stop=True):
 
 
 def split(docs, y):
+    """Convenience split on y."""
     return train_test_split(docs, y, random_state=42, stratify=y)
 
 
@@ -182,7 +220,7 @@ def topic_modeling(docs, max_features=None, max_topics=10, top_topics=10):
 
     for idx, component in enumerate(lda.components_):
         # Sort and get top_topics indices
-        indices = component.argsort(-top_topics:)
+        indices = component.argsort()[-top_topics:]
         # (See above). Features is a List so I can't use fancy indexing.
         topics[idx] = np.array([features[i] for i in indices])
 

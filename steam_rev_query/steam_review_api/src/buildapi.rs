@@ -58,7 +58,12 @@ impl<'val> ReviewApi<'val> {
         api
     }
 
-    /// Change the builder's `appid`.
+    #[inline]
+    pub fn current_appid(&self) -> u32 {
+        self.appid
+    }
+
+    /// Change the builder's `appid`. The `cursor` is reset as well.
     ///
     /// See: the [`new()`] method for a description for `appid`.
     ///
@@ -83,6 +88,7 @@ impl<'val> ReviewApi<'val> {
     /// ```
     pub fn appid(&mut self, new_appid: u32) -> &mut Self {
         self.appid = new_appid;
+        self.query.entry("cursor").insert("*".into());
         self
     }
 
@@ -153,27 +159,11 @@ impl<'val> ReviewApi<'val> {
     }
 
     pub fn change_cursor(&mut self, new_cursor: &'val str) -> Result<&mut Self, RevApiError> {
-        match &**self
-            .query
-            .get("filter")
-            .expect("Unexpected: Filter is always set so you shouldn't see this message.")
-        {
-            // I feel dirty matching on str. Implementing a function to convert &str to Filter seems
-            // comparably worse though.
-            "all" => Err(RevApiError::InvalidFilterCursor),
-            "recent" | "updated" => {
-                self.query.entry("cursor").insert(new_cursor.into());
-                Ok(self)
-            }
-            // The API doesn't expose the internal HashMap so this shouldn't happen.
-            // I could just match on _ and ignore "all", but I'd rather catch if this implodes somehow.
-            bad => unreachable!(
-                concat!(
-                    "Unexpected: The stored query string for Filter can't be ",
-                    "anything other than the variants. Got: {}"
-                ),
-                bad
-            ),
+        if self.paging_ok() {
+            self.query.entry("cursor").insert(new_cursor.into());
+            Ok(self)
+        } else {
+            Err(RevApiError::InvalidFilterCursor)
         }
     }
 
@@ -218,6 +208,29 @@ impl<'val> ReviewApi<'val> {
             .entry("num_per_page")
             .insert(amount.to_string().into());
         self
+    }
+
+    ///
+    pub fn paging_ok(&self) -> bool {
+        match &**self
+            .query
+            .get("filter")
+            .expect("Unexpected: Filter is always set so you shouldn't see this message.")
+        {
+            // I feel dirty matching on str. Implementing a function to convert &str to Filter seems
+            // comparably worse though.
+            "all" => false,
+            "recent" | "updated" => true,
+            // The API doesn't expose the internal HashMap so this shouldn't happen.
+            // I could just match on _ and ignore "all", but I'd rather catch if this implodes somehow.
+            bad => unreachable!(
+                concat!(
+                    "Unexpected: The stored query string for Filter can't be ",
+                    "anything other than the variants. Got: {}"
+                ),
+                bad
+            ),
+        }
     }
 
     /// Build a query into a Url.

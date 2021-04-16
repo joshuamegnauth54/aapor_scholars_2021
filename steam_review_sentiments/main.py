@@ -8,4 +8,7 @@ if __name__ == '__main__':
     # Split on user_suggestion
     X_train, X_test, y_train, y_test = split(docs,
                                              steam_reviews.user_suggestion)
+
+    # TF-IDF and LDA
     X_train_tfidf, X_test_tfidf, tfidf = tfidf_transform(X_train, X_test)
+

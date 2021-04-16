@@ -176,7 +176,8 @@ impl Display for Language {
 impl FromStr for Language {
     type Err = LangParseError;
 
-    /// String to Language.
+    /// String slice to Language.
+    /// Native names as well as shorthands are handled.
     ///
     /// ## Errors
     /// Returns [LangParseError] if an unsupported language is passed in.
@@ -185,35 +186,35 @@ impl FromStr for Language {
     fn from_str(s: &str) -> Result<Self, LangParseError> {
         use Language::*;
         match s {
-            "arabic" => Ok(Arabic),
-            "bulgarian" => Ok(Bulgarian),
-            "schinese" => Ok(SimplifiedChinese),
-            "tchinese" => Ok(TraditionalChinese),
-            "czech" => Ok(Czech),
-            "danish" => Ok(Danish),
-            "dutch" => Ok(Dutch),
-            "english" => Ok(English),
-            "finnish" => Ok(Finnish),
-            "french" => Ok(French),
-            "german" => Ok(German),
-            "greek" => Ok(Greek),
-            "hungarian" => Ok(Hungarian),
-            "italian" => Ok(Italian),
-            "japanese" => Ok(Japanese),
-            "koreana" => Ok(Korean),
-            "norwegian" => Ok(Norwegian),
-            "polish" => Ok(Polish),
-            "portuguese" => Ok(Portuguese),
-            "brazilian" => Ok(PortugueseBrazilian),
-            "romanian" => Ok(Romanian),
-            "russian" => Ok(Russian),
-            "spanish" => Ok(SpanishSpain),
-            "latam" => Ok(SpanishLatAm),
-            "swedish" => Ok(Swedish),
-            "thai" => Ok(Thai),
-            "turkish" => Ok(Turkish),
-            "ukrainian" => Ok(Ukrainian),
-            "vietnamese" => Ok(Vietnamese),
+            "arabic" | "العربية" | "ar" => Ok(Arabic),
+            "bulgarian" | "български език" | "bg" => Ok(Bulgarian),
+            "schinese" | "简体中文" | "zh-CN" => Ok(SimplifiedChinese),
+            "tchinese" | "繁體中文" | "zh-TW" => Ok(TraditionalChinese),
+            "czech" | "čeština" | "cs" => Ok(Czech),
+            "danish" | "Dansk" | "da" => Ok(Danish),
+            "dutch" | "Nederlands" | "nl" => Ok(Dutch),
+            "english" | "English" | "en" => Ok(English),
+            "finnish" | "Suomi" | "fl" => Ok(Finnish),
+            "french" | "Français" | "fr" => Ok(French),
+            "german" | "Deutsch" | "de" => Ok(German),
+            "greek" | "Ελληνικά" | "el" => Ok(Greek),
+            "hungarian" | "Magyar" | "hu" => Ok(Hungarian),
+            "italian" | "Italiano" | "it" => Ok(Italian),
+            "japanese" | "日本語" | "ja" => Ok(Japanese),
+            "koreana" | "한국어" | "ko" => Ok(Korean),
+            "norwegian" | "Norsk" | "no" => Ok(Norwegian),
+            "polish" | "Polski" | "pl" => Ok(Polish),
+            "portuguese" | "Português" | "pt" => Ok(Portuguese),
+            "brazilian" | "Português-Brasil" | "pt-BR" => Ok(PortugueseBrazilian),
+            "romanian" | "Română" | "ro" => Ok(Romanian),
+            "russian" | "Русский" | "ru" => Ok(Russian),
+            "spanish" | "Español-España" | "es" => Ok(SpanishSpain),
+            "latam" | "Español-Latinoamérica" | "es-419" => Ok(SpanishLatAm),
+            "swedish" | "Svenska" | "sv" => Ok(Swedish),
+            "thai" | "ไทย" | "th" => Ok(Thai),
+            "turkish" | "Türkçe" | "tr" => Ok(Turkish),
+            "ukrainian" | "Українська" | "uk" => Ok(Ukrainian),
+            "vietnamese" | "Tiếng Việt" | "vn" => Ok(Vietnamese),
             _ => Err(LangParseError),
         }
     }

@@ -221,6 +221,10 @@
             "replace": "a lot"
         },
         {
+            "term": "stearing",
+            "replace": "steer"
+        },
+        {
             "term": "fck|f**k|f***|****ing|fuc|fuk|fck|****er|f♥♥k|f♥♥♥|♥♥♥♥ing",
             "replace": "fuck"
         },
@@ -245,7 +249,7 @@
             "replace": "boobs"
         },
         {
-            "term": "♥",
+            "term": "♥|<3(?![\\d])*",
             "replace": "heart"
         }
 ],

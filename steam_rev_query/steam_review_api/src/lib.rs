@@ -6,7 +6,9 @@
 //! This crate's code is _not_ affiliated with Valve or Steam in any way.
 //!
 //! I also provide convenience `struct`s for deserializing responses via Serde.
-//! Enable the `convenience_structs` feature if that sounds remotely useful. 😸
+//! [conveniencestructs::flat_query::FlattenedQuery] is a flattened version of the response with
+//! some of the useful data pulled out.
+//! Enable the `convenience_structs` feature if and of that sounds remotely useful. 😸
 //!
 
 mod buildapi;

@@ -1,3 +1,3 @@
-mod tester;
+pub mod review_scraper;
 
-pub use tester::test;
+pub use review_scraper::ReviewScraper;
