@@ -1,6 +1,8 @@
 import numpy as np
 import keras
+import spacy
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.exceptions import NotFittedError
 from keras.models import Sequential
 from keras.layers import BatchNormalization, Conv1D, Dense, Embedding
 from keras.layers.pooling import GlobalMaxPooling1D
@@ -9,72 +11,171 @@ from keras.initializers import Constant
 from utilities import null_preproc, transform_string,\
     transform_all, tokenize_all
 
+# This class is badly designed. I wanted to leverage spaCy, but I combined
+# tools in a very poor way...
+class PadCounts:
+    def __init__(self, nlp, pad_length=None):
+        """Instantiate PadCounts.
 
-def get_embeddings(nlp, X_train, X_test):
-    """Return word vectors and embeddings for X_train and X_test.
+        Parameters
+        ----------
+        nlp : spacy.lang.en.English
+            Trained spaCy language object.
+        pad_length : int, optional
+            Set a predefined length to pad data in transform(). Calculated
+            from X_train during fit() if None.
 
-    The returned vectors are a subset of the spaCy language object's vectors
-    that only include words present in X_train.
+        Returns
+        -------
+        None.
 
-    X_train and X_test should be Docs rather than the TF-IDF transformed
-    sparse arrays.
+        """
+        # Language object for embeddings.
+        self.__nlp = nlp
+        # Word embeddings array.
+        self.__embeddings = None
+        # Sklearn model for word counts.
+        self.__vectorizer = None
+        # Vocabulary size based on X_train.
+        self.__vocab_size = None
+        # Length of the pre-trained word embeddings vector (300 most likely)
+        self.__vec_size = None
+        # Max length of a training document (or a predefined max for padding)
+        self.__pad_length = pad_length
 
-    Parameters
-    ----------
-    nlp : spacy.lang.en.English
-        Trained spaCy language object.
-    X_train : np.ndarray[spacy.tokens.Doc]
-        Array of spaCy Docs (training).
-    X_test : np.ndarray[spacy.tokens.Doc]
-        Array of spaCy Docs (testing).
+    def __to_docs(self, X):
+        # Convert X to a list of Doc if necessary
+        if isinstance(X[0], str):
+            return np.array([self.__nlp(text) for text in X])
+        else:
+            return X
 
-    Returns
-    -------
-    embeddings : np.ndarray[np.float32]
-        Subsetted word embeddings.
-    X_train_tokens : np.ndarray[np.int32]
-        Word embeddings for X_train.
-    X_test_tokens : np.ndarray[np.int32]
-        Word embeddings for X_test.
-    """
+    def fit(self, X_train):
+        """Fit PadCounts on X_train and transform into embeddings.
 
-    # CountVectorizer counts each word/token, so I can use it to extract
-    # ONLY the vectors present in my data from spaCy's pretrained embeddings.
-    vectorizer = CountVectorizer(strip_accents="unicode",
-                                 preprocessor=null_preproc,
-                                 tokenizer=transform_string,
-                                 token_pattern=None).fit(X_train)
-    # The vocabulary size only consists of the terms that appear after
-    # vectorizing. This is our first dimension.
-    # 0 will be used as an indicator for missing words, so let's shift the
-    # vocab by elements + 1.
-    vocab_size = len(vectorizer.get_feature_names()) + 1
-    # Length of the pre-trained word embeddings vector (300 most likely)
-    vec_size = nlp.vocab.vectors_length
-    # Finally, initialize a zero length ndarray with the sizes.
-    embeddings = np.zeros((vocab_size, vec_size), dtype=np.float32)
+        Parameters
+        ----------
+        X_train : np.ndarray[spacy.tokens.Doc or str]
+            Array of spaCy Docs or strings (training).
 
-    # CountVectorizer.vocabulary_ is a dictionary matching word to index.
-    # Thus:
-    # index = vectorizer.vocabulary_["meow"]
-    # value = vectorizer.get_feature_names()[index]
-    # value == "meow"
-    for word, i in vectorizer.vocabulary_.items():
-        # Can't index with NumPy strings. Also, shift the embeddings by 1.
-        embeddings[i + 1] = nlp.vocab[str(word)].vector
+        Raises
+        ------
+        ValueError
+            Raised if X_train isn't an array of spaCy Docs.
 
-    # Tokenize the training and test sets. 0 is the magic NaN value.
-    X_train_tokens = tokenize_all(transform_all(X_train),
-                                  vectorizer,
-                                  0,
-                                  True)
+        Returns
+        -------
+        None.
 
-    X_test_tokens = tokenize_all(transform_all(X_test),
-                                 vectorizer,
-                                 0,
-                                 True)
+        """
+        if not isinstance(X_train, (np.ndarray, list)) or not len(X_train):
+            raise ValueError("X_train needs to be an array of strs or Docs.")
 
-    return embeddings, X_train_tokens, X_test_tokens
+        # Make sure X_train are Docs.
+        X_train = self.__to_docs(X_train)
+
+        # CountVectorizer counts each word/token, so I can use it to extract
+        # ONLY the vectors present in my data from spaCy's pretrained
+        # embeddings.
+        self.__vectorizer = CountVectorizer(strip_accents="unicode",
+                                            preprocessor=null_preproc,
+                                            tokenizer=transform_string,
+                                            token_pattern=None).fit(X_train)
+
+        # The vocabulary size only consists of the terms that appear after
+        # vectorizing. This is our first dimension.
+        # 0 will be used as an indicator for missing words, so let's shift the
+        # vocab by elements + 1.
+        self.__vocab_size = len(self.__vectorizer.get_feature_names()) + 1
+        # Word vectors length (second dimension).
+        self.__vec_size = self.__nlp.vocab.vectors_length
+
+        # Remove stop words, et cetera.
+        # And yeah, due to bad design I'm calling transform_string a lot.
+        X_transformed = transform_all(X_train)
+
+        if not self.__pad_length:
+            self.__pad_length = len(max(X_transformed, key=len))
+
+    def embeddings(self):
+        """Return subsetted embeddings for X_train.
+
+        The returned vectors are a subset of the spaCy language object's
+        vectors that only include words present in X_train.
+
+        PadCounts should be fit() before calling embeddings().
+
+        Raises
+        ------
+        NotFittedError
+            Raised if PadCounts() is unfit.
+
+        Returns
+        -------
+        embeddings : np.ndarray[np.float32]
+            Subsetted word embeddings.
+        """
+        if self.__embeddings:
+            return self.__embeddings
+        elif not self.__vectorizer:
+            raise NotFittedError("Call PadCounts.fit() first.")
+
+        # Initialize a zero length ndarray with the vocab and vector sizes.
+        self.__embeddings = np.zeros((self.__vocab_size, self.__vec_size),
+                                     dtype=np.float32)
+
+        # CountVectorizer.vocabulary_ is a dictionary matching word to index.
+        # Thus:
+        # index = vectorizer.vocabulary_["meow"]
+        # value = vectorizer.get_feature_names()[index]
+        # value == "meow"
+        for word, i in self.__vectorizer.vocabulary_.items():
+            # Can't index with NumPy strings.
+            # Also, shift the embeddings by 1.
+            self.__embeddings[i + 1] = self.__nlp.vocab[str(word)].vector
+
+
+    def transform(self, X, remove_junk=True):
+        """Return tokenized X.
+
+        Parameters
+        ----------
+        X : np.ndarray[Doc or str]
+            Array of Docs or str to tokenize.
+        remove_junk : bool, optional
+            Whether X needs to be transformed to remove stop words.
+            The default is True.
+
+        Raises
+        ------
+        NotFittedError
+            DESCRIPTION.
+        ValueError
+            DESCRIPTION.
+
+        Returns
+        -------
+        X_tokens : np.ndarray[np.int32]
+            Word embeddings for X.
+        """
+        if not self.__vectorizer or not self.__pad_length:
+            raise NotFittedError("Call PadCounts.fit() first.")
+        if not isinstance(X, (np.ndarray, list)) or not len(X):
+            raise ValueError("X_train needs to be an array of strs or Docs.")
+
+        # Make sure X is a list of Docs
+        X = self.__to_docs(X)
+
+        # Remove stop words et cetera if necessary.
+        if remove_junk:
+            X = transform_all(X)
+
+        # Tokenize the training and test sets. 0 is the magic NaN value.
+        return tokenize_all(X,
+                            self.__vectorizer,
+                            0,
+                            True,
+                            self.__pad_length)
 
 
 def cnn_model(embeddings, max_length, ngrams=3, dropout_prob=.4):

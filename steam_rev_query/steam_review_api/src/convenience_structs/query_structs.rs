@@ -2,6 +2,8 @@ use super::{conv_newtypes::*, reviewscore::ReviewScore};
 use crate::language::Language;
 use serde::{de::Error, Deserialize, Deserializer};
 
+// Structs based on: https://partner.steamgames.com/doc/store/getreviews
+
 /// Summary of the query as a whole as well as data on the game such as total amount of reviews.
 /// Only `num_reviews` is present across multiple queries. `review_score_desc` et cetera are only
 /// available in the first query.
@@ -32,34 +34,54 @@ pub struct ReviewAuthor {
     /// Reviewer's total posted reviews.
     pub num_reviews: u32,
     /// Amount of minutes the reviewer played this title.
+    /// May be zero for DLC.
     pub playtime_forever: Minutes,
     /// Amount of minutes reviewer played during the last two weeks.
     pub playtime_last_two_weeks: Minutes,
     /// Amount of minutes reviewer played at the moment they posted their review.
-    pub playtime_at_review: Minutes,
+    /// NOTE: Some Steam releases are missing this field for some reason.
+    pub playtime_at_review: Option<Minutes>,
     /// Unix timestamp indicating when the reviewer last played this title.
     pub last_played: UnixTimestamp,
 }
 
 #[derive(Debug, Deserialize, PartialEq, PartialOrd)]
 pub struct Review {
+    /// Unique ID of the recommendation.
     #[serde(deserialize_with = "str_to_uint")]
     pub recommendationid: u64,
+    /// Reviewer (Steam user).
     pub author: ReviewAuthor,
+    /// Review's language.
     pub language: Language,
+    /// Text of the review.
     pub review: String,
+    /// Date the review was created as a Unix timestamp.
     pub timestamp_created: UnixTimestamp,
+    /// Date the review was last updated as a Unix timestamp.
+    /// Equal to `timestamp_created` if the author never updated the review.
     pub timestamp_updated: UnixTimestamp,
+    /// Bool indicating if the review was positive (true) or negative (false).
     pub voted_up: bool,
+    /// Number of users who voted this review up.
     pub votes_up: u32,
+    /// Number of users who voted this review as funny.
     pub votes_funny: u32,
+    /// Helpfulness score as calculated by Valve.
     #[serde(deserialize_with = "wvs_to_float")]
     pub weighted_vote_score: f64,
+    /// Number of comments on this review.
     pub comment_count: u32,
+    /// Did the reviewer purchase this game on Steam? True if yes.
     pub steam_purchase: bool,
+    /// Was this game given to the reviewer for free? True if yes.
+    /// (The user indicates this via a checkbox.)
     pub received_for_free: bool,
+    /// Was this review written while the game was in Early Access? True if yes.
     pub written_during_early_access: bool,
+    /// Text of the developer's response, if any.
     pub developer_response: Option<String>,
+    /// Unix timestamp of the developer's response, if any.
     pub timestamp_dev_responded: Option<UnixTimestamp>,
 }
 
@@ -147,7 +169,7 @@ mod tests {
             },
             "reviews": [
                 {
-                    "recommendationid": "TOTALLY_FAKE_REVIEW_BY_JOSH",
+                    "recommendationid": "0",
                     "author": {
                         "steamid": "0",
                         "num_games_owned": 1,
@@ -158,7 +180,7 @@ mod tests {
                         "last_played": 1618235983
                     },
                     "language": "english",
-                    "review": "This game is so amazing all I do is play it except for writing this review 😹",
+                    "review": "This game is so amazing all I do is play it except for writing this review 😹 meow",
                     "timestamp_created": 1618161312,
                     "timestamp_updated": 1618161312,
                     "voted_up": true,
@@ -171,7 +193,7 @@ mod tests {
                     "written_during_early_access": false
                 },
                 {
-                    "recommendationid": "TOTALLY_FAKE_REVIEW_LOLOL",
+                    "recommendationid": "0",
                     "author": {
                         "steamid": "0",
                         "num_games_owned": 1400,
@@ -182,7 +204,7 @@ mod tests {
                         "last_played": 1554491710
                     },
                     "language": "english",
-                    "review": "10/10 great combat great story pretty graphics meme123",
+                    "review": "10/10 great combat great story pretty graphics meme123 ⭐⭐⭐⭐⭐",
                     "timestamp_created": 1585055110,
                     "timestamp_updated": 1585055110,
                     "voted_up": true,

@@ -1,5 +1,5 @@
 #[cfg(feature = "convenience_structs")]
-use serde::{de::Error, Deserialize, Deserializer};
+use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     fmt::{self, Display, Formatter},
     str::FromStr,
@@ -11,6 +11,7 @@ use std::{
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum Language {
+    All,
     Arabic,
     Bulgarian,
     SimplifiedChinese,
@@ -62,6 +63,7 @@ impl Language {
     pub fn as_str(self) -> &'static str {
         use Language::*;
         match self {
+            All => "all",
             Arabic => "arabic",
             Bulgarian => "bulgarian",
             SimplifiedChinese => "schinese",
@@ -98,6 +100,7 @@ impl Language {
     pub fn language_code(self) -> &'static str {
         use Language::*;
         match self {
+            All => "all",
             Arabic => "ar",
             Bulgarian => "bg",
             SimplifiedChinese => "zh-CN",
@@ -134,6 +137,7 @@ impl Language {
     pub fn native_name(self) -> &'static str {
         use Language::*;
         match self {
+            All => "All",
             Arabic => "العربية",
             Bulgarian => "български език",
             SimplifiedChinese => "简体中文",
@@ -186,6 +190,7 @@ impl FromStr for Language {
     fn from_str(s: &str) -> Result<Self, LangParseError> {
         use Language::*;
         match s {
+            "all" => Ok(All),
             "arabic" | "العربية" | "ar" => Ok(Arabic),
             "bulgarian" | "български език" | "bg" => Ok(Bulgarian),
             "schinese" | "简体中文" | "zh-CN" => Ok(SimplifiedChinese),
@@ -220,6 +225,7 @@ impl FromStr for Language {
     }
 }
 
+// Deserialize and Serialize
 #[cfg(feature = "convenience_structs")]
 impl<'de> Deserialize<'de> for Language {
     fn deserialize<D>(deserializer: D) -> Result<Language, D::Error>
@@ -228,6 +234,16 @@ impl<'de> Deserialize<'de> for Language {
     {
         let s: String = Deserialize::deserialize(deserializer)?;
         s.parse::<Language>().map_err(D::Error::custom)
+    }
+}
+
+#[cfg(feature = "convenience_structs")]
+impl Serialize for Language {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
     }
 }
 

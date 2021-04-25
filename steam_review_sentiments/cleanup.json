@@ -213,6 +213,162 @@
             "replace": "your"
         },
         {
+            "term": "shan't|(?<![\\w])shant(?![\\w])",
+            "replace": "shall not"
+        },
+        {
+            "term": "a'ight|aight|(?<![\\w])ight(?![\\w])",
+            "replace": "alright"
+        },
+        {
+            "term": "ain't|(?<![\\w])aint(?![\\w])",
+            "replace": "is not"
+        },
+        {
+            "term": "aren't|(?<![\\w])arent(?![\\w])",
+            "replace": "are not"
+        },
+        {
+            "term": "can't|(?<![\\w])cant(?![\\w])",
+            "replace": "can not"
+        },
+        {
+            "term": "could've|couldve",
+            "replace": "could have"
+        },
+        {
+            "term": "couldn't|couldnt",
+            "replace": "could not"
+        },
+        {
+            "term": "didn't|didnt",
+            "replace": "did not"
+        },
+        {
+            "term": "doesn't|doesnt",
+            "replace": "does not"
+        },
+        {
+            "term": "dunno|(?<![\\w])idk(?![\\w])",
+            "replace": "do not know"
+        },
+        {
+            "term": "'em",
+            "replace": "them"
+        },
+        {
+            "term": "everybody's|everybodys",
+            "replace": "everybody is"
+        },
+        {
+            "term": "everyone's|everyones",
+            "replace": "everyone is"
+        },
+        {
+            "term": "gimme",
+            "replace": "give me"
+        },
+        {
+            "term": "gotta",
+            "replace": "got to"
+        },
+        {
+            "term": "hadn't|(?<![\\w])hadnt(?![\\w])",
+            "replace": "had not"
+        },
+        {
+            "term": "haven't|(?<![\\w])havent(?![\\w])",
+            "replace": "have not"
+        },
+        {
+            "term": "hasn't|(?<![\\w])hasnt(?![\\w])",
+            "replace": "has not"
+        },
+        {
+            "term": "he'd|(?<![\\w])hed(?![\\w])",
+            "replace": "he would"
+        },
+        {
+            "term": "she'd",
+            "replace": "she would"
+        },
+        {
+            "term": "they'd|(?<![\\w])theyd(?![\\w])",
+            "replace": "they would"
+        },
+        {
+            "term": "he'll",
+            "replace": "he will"
+        },
+        {
+            "term": "she'll",
+            "replace": "she will"
+        },
+        {
+            "term": "they'll",
+            "replace": "they will"
+        },
+        {
+            "term": "here's",
+            "replace": "here is"
+        },
+        {
+            "term": "there's",
+            "replace": "there is"
+        },
+        {
+            "term": "i'm|i'ma|(?<![\\w])ima|imma(?![\\w])",
+            "replace": "i am"
+        },
+        {
+            "term": "i'd|(?<![\\w])id(?![\\w])",
+            "replace": "i would"
+        },
+        {
+            "term": "i've",
+            "replace": "i have"
+        },
+        {
+            "term": "isn't|(?<![\\w])isnt(?![\\w])",
+            "replace": "is not"
+        },
+        {
+            "term": "it'll|(?<![\\w]itll(?![\\w])",
+            "replace": "it will"
+        },
+        {
+            "term": "it's",
+            "replace": "it is"
+        },
+        {
+            "term": "kinda",
+            "replace": "kind of"
+        },
+        {
+            "term": "should've|shouldve",
+            "replace": "should have"
+        },
+        {
+            "term": "shouldn't|shouldnt",
+            "replace": "should not"
+        },
+        {
+            "term": "that'll|thatll",
+            "replace": "that will"
+        },
+        {
+            "term": "that's|thats",
+            "replace": "that is"
+        },
+        {
+            "term": "there'd|thered",
+            "replace": "there would"
+        },
+        {
+            "term": "there's|theres",
+            "replace": "there is"
+        },
+        {
             "term": "(?<![\\w])r(?![\\w])",
             "replace": "are"
         },

@@ -12,15 +12,15 @@ const STEAM_REV_API: &str = "https://store.steampowered.com/appreviews/";
 /// State information/builder for the Steam review A.P.I.
 ///
 /// https://partner.steamgames.com/doc/store/getreviews
-#[derive(Debug)]
-pub struct ReviewApi<'val> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewApi {
     /// Stores query pairs as key, value to parse with the url crate.
-    query: HashMap<&'static str, Cow<'val, str>>,
+    query: HashMap<&'static str, Cow<'static, str>>,
     /// Steam product's `appid`. May be found on each store page.
     appid: u32,
 }
 
-impl<'val> ReviewApi<'val> {
+impl ReviewApi {
     /// Construct a builder with an `appid`.
     ///
     /// Each product on Steam has an `appid` which is available via the associated
@@ -45,15 +45,12 @@ impl<'val> ReviewApi<'val> {
         // Set defaults
         let (key_json, val_json) = ReviewApi::add_json();
         api.query.insert(key_json, val_json.into());
-        let (key_lang, val_lang) = ReviewApi::add_language(Language::English);
-        api.query.insert(key_lang, val_lang.into());
         // Default to querying by recency for pagination.
         api.filter(Filter::Recent).expect(
             "Unexpected: Changing the filter to Recent shouldn't cause an error in the ctor.",
         );
         // Add default cursor
-        api.change_cursor("*")
-            .expect("Unexpected: Impossible to fail via an invalid Filter here.");
+        api.reset_cursor();
 
         api
     }
@@ -88,7 +85,7 @@ impl<'val> ReviewApi<'val> {
     /// ```
     pub fn appid(&mut self, new_appid: u32) -> &mut Self {
         self.appid = new_appid;
-        self.query.entry("cursor").insert("*".into());
+        self.reset_cursor();
         self
     }
 
@@ -98,9 +95,12 @@ impl<'val> ReviewApi<'val> {
         ("json", "1")
     }
 
-    /// Request reviews in a specific language. Currently not settable via my implementation.
-    fn add_language(lang: Language) -> (&'static str, &'static str) {
-        ("language", lang.as_str())
+    /// Request reviews in a specific language. Cursor is reset
+    /// to the default in order to restart pagination.
+    pub fn add_language(&mut self, lang: Language) -> &mut Self {
+        self.query.entry("language").insert(lang.as_str().into());
+        self.reset_cursor();
+        self
     }
 
     /// Return results in a specific order such as by most recent.
@@ -158,7 +158,10 @@ impl<'val> ReviewApi<'val> {
         }
     }
 
-    pub fn change_cursor(&mut self, new_cursor: &'val str) -> Result<&mut Self, RevApiError> {
+    pub fn change_cursor<C>(&mut self, new_cursor: C) -> Result<&mut Self, RevApiError>
+    where
+        C: Into<Cow<'static, str>>,
+    {
         if self.paging_ok() {
             self.query.entry("cursor").insert(new_cursor.into());
             Ok(self)
@@ -233,6 +236,12 @@ impl<'val> ReviewApi<'val> {
         }
     }
 
+    // Resets cursor to the default value of "*".
+    #[inline]
+    fn reset_cursor(&mut self) {
+        self.query.entry("cursor").insert("*".into());
+    }
+
     /// Build a query into a Url.
     ///
     /// ## Errors
@@ -263,7 +272,7 @@ impl<'val> ReviewApi<'val> {
     }
 }
 
-impl TryFrom<&ReviewApi<'_>> for Url {
+impl TryFrom<&ReviewApi> for Url {
     type Error = ParseError;
 
     fn try_from(value: &ReviewApi) -> Result<Url, Self::Error> {
@@ -285,6 +294,7 @@ mod tests {
             .change_cursor("lol!meow@cats$")
             .expect("Unexpected: Filter is All for some reason?")
             .review_type(ReviewType::All)
+            .add_language(Language::English)
             .purchase_type(PurchaseType::All);
         let _built_api = steam.build().expect("You broke build(), Josh.");
     }

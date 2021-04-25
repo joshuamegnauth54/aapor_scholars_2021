@@ -44,9 +44,22 @@ def transform_string(doc, no_stop=True):
                      if token_check(t, no_stop)])
 
 
-def transform_all(docs):
-    """Transform a list of spaCy Docs to preclude punctuation, stop words."""
-    return np.array([transform_string(doc) for doc in docs],
+def transform_all(docs, no_stop=True):
+    """Transform docs into an ndarray of lemmas per doc.
+
+    Parameters
+    ----------
+    docs : List[spacy.tokens.Doc]
+        List of spaCy Docs.
+    no_stop : bool, optional
+        Whether to remove stop words. The default is True.
+
+    Returns
+    -------
+    corpus : np.ndarray[np.ndarray]
+        Arrays of arrays of lemmas.
+    """
+    return np.array([transform_string(doc, no_stop) for doc in docs],
                     dtype=np.ndarray)
 
 
@@ -94,7 +107,7 @@ def tokenize_all(texts, vectorizer, null_idx, pad=True, max_text_len=None):
                                      maxlen=max_text_len,
                                      value=null_idx)
 
-    return texts_tokens
+    return texts_tokens, max_text_len
 
 
 def null_preproc(doc):
@@ -102,35 +115,28 @@ def null_preproc(doc):
     return doc
 
 
-def get_corpus(docs, no_stop=True):
-    """Transform docs into an ndarray of lemmas per doc.
+def split(docs, y):
+    """Split docs via y.
+
+    This is a convenience wrapper around train_test_split.
 
     Parameters
     ----------
-    docs : List[spacy.tokens.Doc]
-        List of spaCy Docs.
-    no_stop : bool, optional
-        Whether to remove stop words. The default is False.
+    docs : Iterable[Texts]
+        Iterable of texts (strings or Docs).
+    y : Iterable.
+        Response to split and stratify on.
 
     Returns
     -------
-    corpus : np.ndarray[np.ndarray]
-        Arrays of arrays of lemmas.
+    np.ndarray
+        Four arrays of split data.
     """
-    corpus = np.empty(len(docs), np.ndarray)
-    for idx, doc in enumerate(docs):
-        corpus[idx] = transform_string(doc)
-
-    return corpus
-
-
-def split(docs, y):
-    """Convenience split on y."""
     return train_test_split(docs, y, random_state=42, stratify=y)
 
 
 def tfidf_transform(X_train, X_test, max_features=None):
-    """Transforms and vectorizes the training then test sets.
+    """Transform and vectorize the training set then test set.
 
     Train is transformed first followed by the test set using the same object.
     This is mostly a convenience function because trying multiple models
@@ -167,22 +173,39 @@ def tfidf_transform(X_train, X_test, max_features=None):
     return X_train_tfidf, X_test_tfidf, tfidf
 
 
-def predict(nlp, tfidf, model, new_data):
+def predict(nlp, vectorizer, model, new_data):
+    """Transform new_data and predict using model.
+
+    Parameters
+    ----------
+    nlp : spacy.lang.en.English
+        SpaCy language object.
+    vectorizer : sklearn.feature_extraction.text.TfidfVectorizer
+        Fit TfidfVectorizer or CountVectorizer.
+    model : Fit sklearn model class.
+        Any fitted sklearn model or equivalent.
+    new_data : np.ndarray[Doc]
+        NumPy array or List of Docs.
+
+    Raises
+    ------
+    ValueError
+        Invalid new_data (i.e. not a sequence).
+
+    Returns
+    -------
+    np.ndarray
+        Predictions.
+    """
     if not isinstance(new_data, (list, np.ndarray)):
         raise ValueError("The new_data parameter should be a list.")
 
     # Process the data with our spaCy Language object.
     X_new = np.array([nlp(data) for data in new_data])
     # And transform with the Tf-Idf fit on the training data.
-    X_new = tfidf.transform(X_new)
+    X_new = vectorizer.transform(X_new)
 
     return model.predict(X_new)
-
-
-def vocab_counts(tfidf):
-    """Fix later."""
-    _inverse = {count: term for (term, count) in tfidf.vocabulary_.items()}
-    return []
 
 
 def topic_modeling(docs, max_features=None, max_topics=10, top_topics=10):

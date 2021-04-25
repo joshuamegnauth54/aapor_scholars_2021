@@ -1,4 +1,4 @@
-use serde::{de::Error, Deserialize, Deserializer};
+use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     fmt::{self, Display, Formatter},
     str::FromStr,
@@ -96,5 +96,14 @@ impl<'de> Deserialize<'de> for ReviewScore {
     {
         let value: String = Deserialize::deserialize(deserializer)?;
         value.parse::<ReviewScore>().map_err(D::Error::custom)
+    }
+}
+
+impl Serialize for ReviewScore {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
     }
 }

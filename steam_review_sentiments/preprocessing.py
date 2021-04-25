@@ -156,6 +156,8 @@ def normalize_words(reviews):
 
     # The JSON has lists of terms to clean that would be too verbose and
     # ugly to include in the code here.
+    # I based the contractions section from the JSON on Wikipedia's list.
+    # https://en.wikipedia.org/wiki/Wikipedia:List_of_English_contractions
     with open("cleanup.json", 'r') as cleanup_file:
         cleanup = json.load(cleanup_file)
 
