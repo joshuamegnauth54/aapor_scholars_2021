@@ -112,6 +112,7 @@ impl ReviewScraper {
     // Building the query and parsing the JSON shouldn't fail.
     // Send might, though.
     fn send_request(&mut self) -> Result<SteamRevOuter> {
+        // Unfortunately, this will wait for the first request as well!
         self.timer.wait_fire();
         Ok(attohttpc::get(self.query.build().with_context(|| format!("Building the query failed which means something internal broke. Here's the entire ReviewApi struct! {:?}", self.query))?)
             .header("User-Agent", user_agent())

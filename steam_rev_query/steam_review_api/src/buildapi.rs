@@ -268,7 +268,7 @@ impl ReviewApi {
         let base_query = Url::join(&steam_base, &app_id)
             .expect("Unexpected: Joining the Steam A.P.I. and App ID should succeed.");
 
-        Url::parse_with_params(&base_query.as_str(), self.query.iter())
+        Url::parse_with_params(&base_query.as_ref(), self.query.iter())
     }
 }
 

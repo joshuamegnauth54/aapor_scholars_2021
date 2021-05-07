@@ -10,6 +10,7 @@ pub enum RevApiError {
     InvalidFilterDayRange,
 }
 
+#[allow(dead_code)]
 /// Convenience Result<T> type.
 pub type Result<T> = result::Result<T, RevApiError>;
 

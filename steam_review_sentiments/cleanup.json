@@ -369,6 +369,66 @@
             "replace": "there is"
         },
         {
+            "term": "we'd",
+            "replace": "we would"
+        },
+        {
+            "term": "we'll",
+            "replace": "we will"
+        },
+        {
+            "term": "we're",
+            "replace": "we were"
+        },
+        {
+            "term": "we've|(?<![\\w])weve(?![\\w])",
+            "replace": "we have"
+        },
+        {
+            "term": "weren't|(?<![\\w])werent(?![\\w])",
+            "replace": "were not"
+        },
+        {
+            "term": "what's|(?<![\\w])whats(?![\\w])",
+            "replace": "what is"
+        },
+        {
+            "term": "who'd|(?<![\\w])whod(?![\\w])",
+            "replace": "who would"
+        },
+        {
+            "term": "who's|(?<![\\w])whos(?![\\w])",
+            "replace": "who is"
+        },
+        {
+            "term": "why'd|(?<![\\w])whyd(?![\\w])",
+            "replace": "why did"
+        },
+        {
+            "term": "won't",
+            "replace": "will not"
+        },
+        {
+            "term": "where'd|whered",
+            "replace": "where did"
+        },
+        {
+            "term": "where's|wheres",
+            "replace": "where is"
+        },
+        {
+            "term": "you'd|(?<![\\w])youd(?![\\w])",
+            "replace": "you would"
+        },
+        {
+            "term": "you're|youre",
+            "replace": "you are"
+        },
+        {
+            "term": "you've|youve",
+            "replace": "you have"
+        },
+        {
             "term": "(?<![\\w])r(?![\\w])",
             "replace": "are"
         },
