@@ -1,18 +1,23 @@
-// use anyhow::{Context, Result};
-use csv::Writer;
+use csv::{Reader, Writer};
 use hash_hasher::{HashBuildHasher, HashedSet};
-use review_scraper::ReviewScraper;
+use rev_query_utils::{error::Result, resumeinfo::ResumeInfo};
 use std::{
     collections::hash_map::DefaultHasher,
-    //convert::TryInto,
     fs::File,
     hash::{Hash, Hasher},
-    io,
     iter::FromIterator,
     path::Path,
 };
-use steam_review_api::{convenience_structs::flat_query::FlattenedQuery, RevApiError, ReviewApi};
+use steam_review_api::convenience_structs::flat_query::FlattenedQuery;
+use tracing::{error, warn};
 
+#[derive(Debug)]
+pub struct ResumeScraperCache {
+    pub cache: ScraperCache,
+    pub resume_info: ResumeInfo,
+}
+
+#[derive(Debug)]
 pub struct ScraperCache {
     // Hashes of FlattenedQuery.
     // The set only stores hashes by using hash_hasher in order to keep memory use down.
@@ -21,14 +26,12 @@ pub struct ScraperCache {
     cache: Vec<FlattenedQuery>,
     // Current index of unwritten data
     write_index: usize,
-    // Internal scraper used to pull queries.
-    scraper: ReviewScraper,
     // CSV file.
     file: Writer<File>,
 }
 
 impl ScraperCache {
-    pub fn new<P>(scraper: ReviewScraper, cache_size: usize, path: P) -> Result<Self, io::Error>
+    pub fn new<P>(cache_size: usize, path: P) -> Result<Self>
     where
         P: AsRef<Path>,
     {
@@ -43,27 +46,77 @@ impl ScraperCache {
             seen_set: HashedSet::with_capacity_and_hasher(cache_size, HashBuildHasher::default()),
             cache: Vec::with_capacity(cache_size),
             write_index: 0,
-            scraper,
             file: csv_writer,
         })
     }
 
-    /*#[inline]
-    pub fn new_from_api<P>(api: ReviewApi, cache_size: usize, path: P) -> Result<Self, RevApiError>
+    /// Resume a scrape from a CSV file.
+    /// Scrapes are only resumeable from a single appid. The file specified by `path` shouldn't contain
+    /// multiple appids. Timestamps are required.
+    #[tracing::instrument]
+    pub fn resume_from_file<P>(
+        cache_size: usize,
+        path: P,
+        // Fail on errors while parsing if true else skip the row.
+        fail_on_error: bool,
+    ) -> Result<ResumeScraperCache>
     where
-        P: AsRef<Path>,
+        P: AsRef<Path> + std::fmt::Debug + std::fmt::Display,
     {
-        ScraperCache::new(api.try_into()?, cache_size, path)
-    }*/
+        let mut seen_set =
+            HashedSet::with_capacity_and_hasher(cache_size, HashBuildHasher::default());
+        let mut resume_info = ResumeInfo::default();
+
+        {
+            let mut csv_reader = Reader::from_path(&path)?;
+            for flat_query in csv_reader.deserialize::<FlattenedQuery>() {
+                match flat_query {
+                    Ok(flat_query) => {
+                        let mut hasher = DefaultHasher::new();
+                        flat_query.hash(&mut hasher);
+                        let hash = hasher.finish();
+                        seen_set.insert(hash);
+
+                        resume_info.update(&flat_query)?;
+                    }
+                    Err(e) if fail_on_error => return Err(e.into()),
+                    Err(e) => {
+                        error!(
+                            "WARNING: Failed to parse a row of the CSV: {}.\nError given: {}",
+                            path, e
+                        )
+                    }
+                }
+            }
+        }
+
+        // Append to a scrape
+        let csv_file = File::with_options().append(true).open(path)?;
+        let csv_writer = Writer::from_writer(csv_file);
+
+        Ok(ResumeScraperCache {
+            cache: ScraperCache {
+                seen_set,
+                cache: Vec::with_capacity(cache_size),
+                write_index: 0,
+                file: csv_writer,
+            },
+            resume_info: resume_info,
+        })
+    }
 
     /// Write the entire cache out to file or resume a failed write.
-    pub fn flush_cache(&mut self) -> Result<(), csv::Error> {
+    pub fn flush_cache(&mut self) -> Result<()> {
         // I'm not draining the cache in order to handle errors if necessary.
         // Draining would clear the cache once the iterator is dropped.
         for (i, query) in self.cache.iter().enumerate().skip(self.write_index) {
             if let Err(e) = self.file.serialize(query) {
                 self.write_index = i;
-                return Err(e);
+                warn!(
+                    "Write index set to {} because serializing a query failed.",
+                    self.write_index
+                );
+                return Err(e.into());
             }
         }
 
@@ -85,9 +138,9 @@ impl ScraperCache {
     }
 
     // Filter the latest set of queries by checking if the hash exists in seen_set.
-    fn filter_data<'a, B>(&self, new_data: &'a [FlattenedQuery]) -> B
+    fn filter_data<'iter, B>(&self, new_data: &'iter [FlattenedQuery]) -> B
     where
-        B: FromIterator<(&'a FlattenedQuery, u64)>,
+        B: FromIterator<(&'iter FlattenedQuery, u64)>,
     {
         new_data
             .iter()
@@ -112,7 +165,7 @@ impl ScraperCache {
 
     // Updates the scraper's cache without triggering reallocations.
     // The cache should stay at or below the size provided during construction.
-    fn update_cache(&mut self, item: &FlattenedQuery) -> Result<(), csv::Error> {
+    fn update_cache(&mut self, item: &FlattenedQuery) -> Result<()> {
         if self.cache_full() {
             self.flush_cache()?;
             debug_assert!(self.cache.len() < self.cache.capacity());
@@ -123,7 +176,7 @@ impl ScraperCache {
     }
 
     // Add the filtered queries and hashes to the internal caches.
-    fn process_data(&mut self, data: &[(&FlattenedQuery, u64)]) -> Result<(), csv::Error> {
+    fn process_data(&mut self, data: &[(&FlattenedQuery, u64)]) -> Result<()> {
         for (flat, hash) in data {
             self.seen_set.insert(*hash);
             self.update_cache(flat)?;
@@ -132,31 +185,21 @@ impl ScraperCache {
         Ok(())
     }
 
-    pub fn insert(&mut self, data: &[FlattenedQuery]) -> Result<(), csv::Error> {
+    pub fn insert(&mut self, data: &[FlattenedQuery]) -> Result<()> {
         let filtered_data: Vec<_> = self.filter_data(data);
         self.process_data(&filtered_data)
     }
 }
 
 impl Drop for ScraperCache {
+    #[tracing::instrument]
     fn drop(&mut self) {
         if let Err(e) = self.flush_cache() {
-            eprintln!(
+            error!(
                 "Failed to flush remaining cache on quit. Lost: {} rows.",
                 self.cache.len()
             );
+            warn!("Error on cache flush: {}", e);
         }
     }
 }
-
-// Don't remember why I was doin' this.
-/*
-impl TryFrom<(ReviewApi, usize)> for ScraperManager {
-    type Error = RevApiError;
-
-    fn try_from(api: (ReviewApi, usize)) -> Result<Self, Self::Error> {
-        let scraper: ReviewScraper = api.0.try_into()?;
-        Ok(ScraperManager::new(scraper, api.1))
-    }
-}
-*/

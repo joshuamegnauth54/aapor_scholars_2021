@@ -1,14 +1,18 @@
 [package]
 name = "review_scraper"
-version = "0.5.0"
+version = "0.8.0"
 authors = ["Joshua Megnauth"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rev_query_utils = {path = "../rev_query_utils"}
 steam_review_api = {path = "../steam_review_api", features = ["convenience_structs"]}
 anyhow = "^1.0"
-attohttpc = {version = "^0.16.3", features = ["json"]}
+attohttpc = {version = "^0.17.0", features = ["json"]}
+lazy_static = "^1.4.0"
+scraper = "^0.12.0"
 serde = {version = "^1.0.124", features = ["derive"]}
 serde_json = "^1.0.64"
+tracing = "^0.1.26"

@@ -1,10 +1,133 @@
 use super::{conv_newtypes::*, query_structs::Review};
 use crate::language::Language;
-use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
+use either::Either;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::{
+    borrow::Cow,
+    fmt::{self, Display, Formatter},
+    hash::{Hash, Hasher},
+    rc::Rc,
+};
+
+/// TitleSerde is a reference counted String or a default in order to save memory.
+/// The struct implements Serialize and Deserialize based on the value of Rc<String> or the
+/// stored &'static str.
+#[derive(Clone, Debug, Eq)]
+pub struct TitleSerde(Either<Rc<String>, &'static str>);
+
+impl TitleSerde {
+    #[inline]
+    pub fn is_default(&self) -> bool {
+        self.as_ref() == "NA"
+    }
+}
+
+// Serde traits
+impl Serialize for TitleSerde {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match &self.0 {
+            Either::Left(title) => serializer.serialize_str(&*title),
+            Either::Right(na_title) => serializer.serialize_str(na_title),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for TitleSerde {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let title: String = Deserialize::deserialize(deserializer)?;
+        Ok(TitleSerde(Either::Left(Rc::new(title))))
+    }
+}
+
+// From<T> implementations
+impl From<Rc<String>> for TitleSerde {
+    #[inline]
+    fn from(title: Rc<String>) -> Self {
+        TitleSerde(Either::Left(title))
+    }
+}
+
+impl From<&Rc<String>> for TitleSerde {
+    #[inline]
+    fn from(title: &Rc<String>) -> Self {
+        TitleSerde(Either::Left(title.clone()))
+    }
+}
+
+impl From<&'static str> for TitleSerde {
+    #[inline]
+    fn from(null_title: &'static str) -> Self {
+        TitleSerde(Either::Right(null_title))
+    }
+}
+
+impl From<String> for TitleSerde {
+    #[inline]
+    fn from(title: String) -> Self {
+        TitleSerde(Either::Left(Rc::new(title)))
+    }
+}
+
+// Misc traits
+impl Display for TitleSerde {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match &self.0 {
+            Either::Left(title) => title.fmt(f),
+            Either::Right(null_title) => null_title.fmt(f),
+        }
+    }
+}
+
+impl Default for TitleSerde {
+    #[inline]
+    fn default() -> Self {
+        TitleSerde(Either::Right("NA"))
+    }
+}
+
+impl AsRef<str> for TitleSerde {
+    fn as_ref(&self) -> &str {
+        match &self.0 {
+            Either::Left(title) => &*title,
+            Either::Right(null_title) => null_title,
+        }
+    }
+}
+
+// I'd want hashes on the string value level rather than on Either::Left and Either::Right
+// along with the string. In other words, deriving Hash would produce two different hashes for
+// Either::Left(Rc::new("meow".to_string()))
+// and
+// Either::Right("meow")
+// (I checked.)
+// Note: This behavior isn't wrong but I consider it wrong for my specific use case.
+impl Hash for TitleSerde {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        match &self.0 {
+            Either::Left(title) => title.hash(hasher),
+            Either::Right(null_title) => null_title.hash(hasher),
+        }
+    }
+}
+
+// Clippy yelled at me for deriving PartialEq.
+impl PartialEq<TitleSerde> for TitleSerde {
+    fn eq(&self, other: &TitleSerde) -> bool {
+        // Hashes are implemented on the string themselves so I'll implement eq the same way.
+        self.as_ref() == other.as_ref()
+    }
+}
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Deserialize, Serialize)]
 pub struct FlattenedQuery {
+    pub title: TitleSerde,
+    pub appid: TitleSerde,
     pub recommendation_id: u64,
     pub steam_id: u64,
     pub num_games_owned: u32,
@@ -26,6 +149,8 @@ pub struct FlattenedQuery {
 impl From<Review> for FlattenedQuery {
     fn from(other: Review) -> Self {
         Self {
+            title: TitleSerde::default(),
+            appid: TitleSerde::default(),
             recommendation_id: other.recommendationid,
             steam_id: other.author.steamid,
             num_games_owned: other.author.num_games_owned,
@@ -43,6 +168,22 @@ impl From<Review> for FlattenedQuery {
             written_during_early_access: other.written_during_early_access,
             developer_response: other.developer_response.map_or("".into(), Into::into),
         }
+    }
+}
+
+impl FlattenedQuery {
+    pub fn from_with_title_strs(other: Review, title: Rc<String>, appid: Rc<String>) -> Self {
+        let mut query: Self = other.into();
+        query.title = title.into();
+        query.appid = appid.into();
+        query
+    }
+
+    pub fn from_with_titles(other: Review, title: TitleSerde, appid: TitleSerde) -> Self {
+        let mut query: Self = other.into();
+        query.title = title;
+        query.appid = appid;
+        query
     }
 }
 

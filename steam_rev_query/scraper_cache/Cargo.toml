@@ -9,6 +9,8 @@ edition = "2018"
 anyhow = "^1.0"
 csv = "^1.1"
 hash_hasher = "^2.0.3"
+rev_query_utils = {path = "../rev_query_utils"}
 review_scraper = {path = "../review_scraper"}
-serde = {version = "^1.0.124", features = ["derive"]}
+serde = {version = "^1.0.125", features = ["derive"]}
 steam_review_api = {path = "../steam_review_api", features = ["convenience_structs"]}
+tracing = "^0.1.26"
