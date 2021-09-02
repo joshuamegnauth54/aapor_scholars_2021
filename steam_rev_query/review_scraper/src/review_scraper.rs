@@ -1,6 +1,6 @@
-use anyhow::{Context, Result};
 use attohttpc::header::{COOKIE, USER_AGENT};
 use lazy_static::lazy_static;
+use rev_query_utils::error::{Error, Result};
 use scraper::{Html, Selector};
 use std::{
     convert::{TryFrom, TryInto},
@@ -98,7 +98,7 @@ pub struct ReviewScraper {
 }
 
 impl TryFrom<ReviewApi> for ReviewScraper {
-    type Error = RevApiError;
+    type Error = Error;
 
     /// Build a ReviewScraper from a ReviewApi query.
     ///
@@ -112,7 +112,7 @@ impl TryFrom<ReviewApi> for ReviewScraper {
     /// ## Errors
     /// ReviewScraper assumes that the caller wants pagination and thus
     /// returns `RevApiError::InvalidFilterCursor` for invalid states.
-    fn try_from(query: ReviewApi) -> Result<Self, Self::Error> {
+    fn try_from(query: ReviewApi) -> Result<Self> {
         if query.paging_ok() {
             let (app_title, appid) = Self::try_fetch_title(query.current_appid());
 
@@ -123,25 +123,25 @@ impl TryFrom<ReviewApi> for ReviewScraper {
                 appid,
             })
         } else {
-            Err(RevApiError::InvalidFilterCursor)
+            Err(RevApiError::InvalidFilterCursor.into())
         }
     }
 }
 
 impl TryFrom<&ReviewApi> for ReviewScraper {
-    type Error = RevApiError;
+    type Error = Error;
 
     #[inline]
-    fn try_from(query: &ReviewApi) -> Result<Self, Self::Error> {
+    fn try_from(query: &ReviewApi) -> Result<Self> {
         query.clone().try_into()
     }
 }
 
 impl TryFrom<&mut ReviewApi> for ReviewScraper {
-    type Error = RevApiError;
+    type Error = Error;
 
     #[inline]
-    fn try_from(query: &mut ReviewApi) -> Result<Self, Self::Error> {
+    fn try_from(query: &mut ReviewApi) -> Result<Self> {
         query.clone().try_into()
     }
 }
@@ -154,9 +154,9 @@ impl ReviewScraper {
     fn send_request(&mut self) -> Result<SteamRevOuter> {
         // Unfortunately, this will wait for the first request as well!
         self.timer.wait_fire();
-        Ok(attohttpc::get(self.query.build().with_context(|| format!("Building the query failed which means something internal broke. Here's the entire ReviewApi struct! {:?}", self.query))?)
+        Ok(attohttpc::get(self.query.build()?)
             .header("User-Agent", user_agent())
-            .send().context("Failed sending the built SteamRevApi request.")?
+            .send()?
             .json::<SteamRevOuter>()?)
     }
 
@@ -172,7 +172,8 @@ impl ReviewScraper {
         );
         // Update cursor for pagination.
         // This shouldn't fail because we checked if pagination is okay when we built the Scraper.
-        self.query.change_cursor(raw_query.cursor)?;
+        // (And either way using day_range is messy).
+        self.query.change_cursor(raw_query.cursor, true)?;
         Ok(raw_query
             .reviews
             .into_iter()
@@ -191,6 +192,8 @@ impl ReviewScraper {
     }
 
     fn try_fetch_title(appid: u32) -> (TitleSerde, TitleSerde) {
+        // NOTE: I forgot why I'm storing this as a TitleSerde...
+        // I can probably just keep it as a u32.
         let appid_str = appid.to_string().into();
         info!("Attempting to scrape title for {}.", appid_str);
 

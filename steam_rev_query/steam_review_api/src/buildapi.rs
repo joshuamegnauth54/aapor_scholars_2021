@@ -9,7 +9,7 @@ use crate::{
 
 const STEAM_REV_API: &str = "https://store.steampowered.com/appreviews/";
 
-/// State information/builder for the Steam review A.P.I.
+/// Query builder for the Steam review A.P.I.
 ///
 /// https://partner.steamgames.com/doc/store/getreviews
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -158,11 +158,15 @@ impl ReviewApi {
         }
     }
 
-    pub fn change_cursor<C>(&mut self, new_cursor: C) -> Result<&mut Self, RevApiError>
+    pub fn change_cursor<C>(
+        &mut self,
+        new_cursor: C,
+        unchecked: bool,
+    ) -> Result<&mut Self, RevApiError>
     where
         C: Into<Cow<'static, str>>,
     {
-        if self.paging_ok() {
+        if self.paging_ok() | unchecked {
             self.query.entry("cursor").insert(new_cursor.into());
             Ok(self)
         } else {
@@ -268,7 +272,7 @@ impl ReviewApi {
         let base_query = Url::join(&steam_base, &app_id)
             .expect("Unexpected: Joining the Steam A.P.I. and App ID should succeed.");
 
-        Url::parse_with_params(&base_query.as_ref(), self.query.iter())
+        Url::parse_with_params(base_query.as_ref(), self.query.iter())
     }
 }
 
@@ -291,7 +295,7 @@ mod tests {
             .review_type(ReviewType::All)
             .filter(Filter::Updated)
             .expect("Unexpected: Setting Filter::Recent.")
-            .change_cursor("lol!meow@cats$")
+            .change_cursor("lol!meow@cats$", false)
             .expect("Unexpected: Filter is All for some reason?")
             .review_type(ReviewType::All)
             .add_language(Language::English)
@@ -302,7 +306,7 @@ mod tests {
     #[test]
     fn cursor_default_filter() {
         let _built_api = ReviewApi::new(21690)
-            .change_cursor("koolfakecursor")
+            .change_cursor("koolfakecursor", false)
             .expect("Unexpected: Filter is All for some reason?")
             .build()
             .expect("Yay build() is broken now!");
@@ -311,7 +315,7 @@ mod tests {
     #[test]
     fn cursor_filter_all() {
         let _built_api = ReviewApi::new(584400)
-            .change_cursor("dontpanikherepls")
+            .change_cursor("dontpanikherepls", false)
             .expect("Unexpected: Filter is All before I set it to All!!")
             .filter(Filter::All)
             .expect_err("Setting filter to All with a cursor didn't return an error.");

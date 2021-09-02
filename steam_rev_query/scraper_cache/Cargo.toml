@@ -6,11 +6,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "^1.0"
-csv = "^1.1"
-hash_hasher = "^2.0.3"
+anyhow = "^1"
+csv = "^1"
+hash_hasher = "^2"
 rev_query_utils = {path = "../rev_query_utils"}
 review_scraper = {path = "../review_scraper"}
-serde = {version = "^1.0.125", features = ["derive"]}
+serde = {version = "^1", features = ["derive"]}
 steam_review_api = {path = "../steam_review_api", features = ["convenience_structs"]}
-tracing = "^0.1.26"
+tracing = "^0.1"

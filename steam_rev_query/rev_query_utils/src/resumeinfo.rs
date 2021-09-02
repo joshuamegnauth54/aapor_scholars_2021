@@ -38,7 +38,7 @@ impl Default for ResumeInfo {
     fn default() -> Self {
         Self {
             appid: TitleSerde::default(),
-            timestamp: UnixTimestamp(u64::MAX),
+            timestamp: UnixTimestamp(i64::MAX),
         }
     }
 }

@@ -13,7 +13,7 @@ use std::{
 /// The struct implements Serialize and Deserialize based on the value of Rc<String> or the
 /// stored &'static str.
 #[derive(Clone, Debug, Eq)]
-pub struct TitleSerde(Either<Rc<String>, &'static str>);
+pub struct TitleSerde(Either<Rc<str>, &'static str>);
 
 impl TitleSerde {
     #[inline]
@@ -41,21 +41,21 @@ impl<'de> Deserialize<'de> for TitleSerde {
         D: Deserializer<'de>,
     {
         let title: String = Deserialize::deserialize(deserializer)?;
-        Ok(TitleSerde(Either::Left(Rc::new(title))))
+        Ok(TitleSerde(Either::Left(title.into())))
     }
 }
 
 // From<T> implementations
-impl From<Rc<String>> for TitleSerde {
+impl From<Rc<str>> for TitleSerde {
     #[inline]
-    fn from(title: Rc<String>) -> Self {
+    fn from(title: Rc<str>) -> Self {
         TitleSerde(Either::Left(title))
     }
 }
 
-impl From<&Rc<String>> for TitleSerde {
+impl From<&Rc<str>> for TitleSerde {
     #[inline]
-    fn from(title: &Rc<String>) -> Self {
+    fn from(title: &Rc<str>) -> Self {
         TitleSerde(Either::Left(title.clone()))
     }
 }
@@ -70,7 +70,7 @@ impl From<&'static str> for TitleSerde {
 impl From<String> for TitleSerde {
     #[inline]
     fn from(title: String) -> Self {
-        TitleSerde(Either::Left(Rc::new(title)))
+        TitleSerde(Either::Left(title.into()))
     }
 }
 
@@ -172,7 +172,7 @@ impl From<Review> for FlattenedQuery {
 }
 
 impl FlattenedQuery {
-    pub fn from_with_title_strs(other: Review, title: Rc<String>, appid: Rc<String>) -> Self {
+    pub fn from_with_title_strs(other: Review, title: Rc<str>, appid: Rc<str>) -> Self {
         let mut query: Self = other.into();
         query.title = title.into();
         query.appid = appid.into();
@@ -221,6 +221,6 @@ mod tests {
             timestamp_dev_responded: None,
         };
 
-        let flattened: FlattenedQuery = fake_rev.into();
+        let _flattened: FlattenedQuery = fake_rev.into();
     }
 }

@@ -6,5 +6,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-csv = "^1.1"
+attohttpc = "0.17"
+csv = "1.1"
 steam_review_api = {path = "../steam_review_api", features = ["convenience_structs"]}
+url = "2.2"

@@ -1,6 +1,9 @@
 use csv::{Reader, Writer};
 use hash_hasher::{HashBuildHasher, HashedSet};
-use rev_query_utils::{error::Result, resumeinfo::ResumeInfo};
+use rev_query_utils::{
+    error::{Error, Result},
+    resumeinfo::ResumeInfo,
+};
 use std::{
     collections::hash_map::DefaultHasher,
     fs::File,
@@ -9,7 +12,7 @@ use std::{
     path::Path,
 };
 use steam_review_api::convenience_structs::flat_query::FlattenedQuery;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug)]
 pub struct ResumeScraperCache {
@@ -101,7 +104,7 @@ impl ScraperCache {
                 write_index: 0,
                 file: csv_writer,
             },
-            resume_info: resume_info,
+            resume_info,
         })
     }
 
@@ -185,12 +188,21 @@ impl ScraperCache {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn insert(&mut self, data: &[FlattenedQuery]) -> Result<()> {
         let filtered_data: Vec<_> = self.filter_data(data);
-        self.process_data(&filtered_data)
+        let length = filtered_data.len();
+        if length > 0 {
+            info!("{} valid, unique nodes scraped.", length);
+            self.process_data(&filtered_data)
+        } else {
+            warn!("Scraped all duplicate nodes or zero nodes total.");
+            Err(Error::NoDataAfterFiltering)
+        }
     }
 }
 
+// Ensure that the cached data are written out when the cache is dropped.
 impl Drop for ScraperCache {
     #[tracing::instrument]
     fn drop(&mut self) {
