@@ -1,29 +1,73 @@
 use chrono::{offset, TimeZone, Utc};
 use clap::{App, Arg, ArgMatches};
-use rev_query_utils::error::Error;
+use either::Either;
+use rev_query_utils::error::{Error, Result};
 use review_scraper::ReviewScraper;
 use scraper_cache::{ResumeScraperCache, ScraperCache};
-use std::convert::TryInto;
-use std::io::ErrorKind;
-use steam_review_api::{Filter, ReviewApi, ReviewType};
+use std::{
+    convert::TryInto,
+    io::ErrorKind,
+    iter::{Map, Rev, Take},
+};
+use steam_review_api::{
+    convenience_structs::flat_query::FlattenedQuery, Filter, ReviewApi, ReviewType,
+};
 use tracing::{info, warn};
 
 const DEFAULT_CACHE_SIZE: usize = 500;
+trait EndAfterZero = Fn(Result<Vec<FlattenedQuery>>) -> Result<Vec<FlattenedQuery>>;
 
-pub(crate) struct ScraperAppSettings {
-    pub scraper: ReviewScraper,
-    pub cache: ScraperCache,
-    pub end_after_zero: bool,
-    pub scrape_n: Option<u32>,
+fn end_after_zero_wrap(
+    item: Result<Vec<FlattenedQuery>>,
+    keep_going: bool,
+) -> Result<Vec<FlattenedQuery>> {
+    // Ugly. :(
+    // Returns an empty vector if the scraper should keep going if all duplicates were received.
+    match item {
+        Ok(item) => Ok(item),
+        Err(Error::NoDataAfterFiltering) if keep_going => Ok(vec![]),
+        Err(e) => Err(e),
+    }
 }
 
-impl ScraperAppSettings {
+pub(crate) struct ScraperAppSettings<IterMapFn>
+where
+    IterMapFn: EndAfterZero,
+{
+    pub scraper: Either<Map<Take<ReviewScraper>, IterMapFn>, Map<ReviewScraper, IterMapFn>>,
+    pub cache: ScraperCache,
+}
+
+impl<IterMapFn> ScraperAppSettings<IterMapFn>
+where
+    IterMapFn: EndAfterZero,
+{
     pub(crate) fn from_arguments() -> Self {
         let arg_matches = build_arguments();
         build_scraper(arg_matches)
     }
 }
 
+fn wrap_scraper<IterMapFn>(
+    scraper: ReviewScraper,
+    scrape_n: Option<usize>,
+    end_after_zero: bool,
+) -> Either<Map<Take<ReviewScraper>, IterMapFn>, Map<ReviewScraper, IterMapFn>>
+where
+    IterMapFn: EndAfterZero,
+{
+    if let Some(scrape_n) = scrape_n {
+        Either::Left(
+            scraper
+                .take(scrape_n)
+                .map(|item| end_after_zero_wrap(item, end_after_zero)),
+        )
+    } else {
+        Either::Right(scraper.map(|item| end_after_zero_wrap(item, end_after_zero)))
+    }
+}
+
+// Panic on IO errors with useful messages.
 fn io_error_handler(error: ErrorKind, path: &str) -> ! {
     use ErrorKind::*;
     match error {
@@ -72,14 +116,14 @@ fn build_arguments() -> ArgMatches<'static> {
             Arg::with_name("end_after_zero")
             .short("e")
             .long("end-after-no-new-data")
-            .help("Stop the current scrape if the the last batch consisted of all duplicates. Use with resume")
+            .help("Stop the current scrape if the the last batch consisted of all duplicates. Use with resume.")
             .takes_value(false)
         )
         .arg(
             Arg::with_name("scrape_n")
             .short("n")
             .long("number")
-            .help("Scrape only up to N values")
+            .help("Scrape only up to N * 100 values.")
             .takes_value(true)
             //.conflicts_with("end_after_zero")
         )
@@ -97,7 +141,10 @@ fn build_arguments() -> ArgMatches<'static> {
         .get_matches()
 }
 
-fn build_scraper(matches: ArgMatches<'static>) -> ScraperAppSettings {
+fn build_scraper<IterMapFn>(matches: ArgMatches<'static>) -> ScraperAppSettings<IterMapFn>
+where
+    IterMapFn: EndAfterZero,
+{
     let matches = build_arguments();
 
     // Path to either resume a scrape or where to save a new one.
@@ -123,7 +170,7 @@ fn build_scraper(matches: ArgMatches<'static>) -> ScraperAppSettings {
         // Convert to an Option instead of a Result; panic if negative.
         n.parse::<i32>().ok().and_then(|number| {
             if number.is_positive() {
-                Some(number as u32)
+                Some(number as usize)
             } else {
                 panic!(r#""number" must positive (you can't scrape a negative amount)."#);
             }
@@ -183,14 +230,13 @@ fn build_scraper(matches: ArgMatches<'static>) -> ScraperAppSettings {
                 .expect("Failed to set day_range while resuming a scrape; this is surely a bug.")
                 .num_per_page(100)
                 .review_type(review_type);
-            ScraperAppSettings {
-                scraper: review_api
-                    .try_into()
-                    .expect("Error when building a scraper from the Steam API"),
-                cache,
-                end_after_zero,
-                scrape_n,
-            }
+
+            let scraper: ReviewScraper = review_api
+                .try_into()
+                .expect("Error when building a scraper from the Steam API after parsing args.");
+
+            let scraper = wrap_scraper(scraper, scrape_n, end_after_zero);
+            ScraperAppSettings { scraper, cache }
         }
     } else {
         let appid = matches
@@ -203,7 +249,7 @@ fn build_scraper(matches: ArgMatches<'static>) -> ScraperAppSettings {
             .num_per_page(100)
             .review_type(review_type)
             .try_into()
-            .expect("Failed to build a scraper from the Steam review API.");
+            .expect("Error when building a scraper from the Steam API after parsing args.");
 
         let cache = match ScraperCache::new(cache_size, path) {
             Ok(cache) => cache,
@@ -215,11 +261,8 @@ fn build_scraper(matches: ArgMatches<'static>) -> ScraperAppSettings {
             "Beginning a new scrape of appid {} and writing to {}.",
             appid, path
         );
-        ScraperAppSettings {
-            scraper,
-            cache,
-            end_after_zero,
-            scrape_n,
-        }
+
+        let scraper = wrap_scraper(scraper, scrape_n, end_after_zero);
+        ScraperAppSettings { scraper, cache }
     }
 }

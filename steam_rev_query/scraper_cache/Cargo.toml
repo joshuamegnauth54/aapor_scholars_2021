@@ -1,16 +1,16 @@
 [package]
 name = "scraper_cache"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "^1"
-csv = "^1"
-hash_hasher = "^2"
+anyhow = "1"
+csv = "1"
+hash_hasher = "2"
 rev_query_utils = {path = "../rev_query_utils"}
 review_scraper = {path = "../review_scraper"}
 serde = {version = "^1", features = ["derive"]}
 steam_review_api = {path = "../steam_review_api", features = ["convenience_structs"]}
-tracing = "^0.1"
+tracing = "0.1"

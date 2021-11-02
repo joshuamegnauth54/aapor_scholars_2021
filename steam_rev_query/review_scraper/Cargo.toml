@@ -2,14 +2,14 @@
 name = "review_scraper"
 version = "0.9.0"
 authors = ["Joshua Megnauth"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 rev_query_utils = {path = "../rev_query_utils"}
 steam_review_api = {path = "../steam_review_api", features = ["convenience_structs"]}
-attohttpc = {version = "0.17", features = ["json"]}
+attohttpc = {version = "0.18", features = ["json"]}
 lazy_static = "1.4"
 scraper = "0.12"
 serde = {version = "1.0", features = ["derive"]}

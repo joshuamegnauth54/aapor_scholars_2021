@@ -1,12 +1,12 @@
 [package]
 name = "rev_query_utils"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-attohttpc = "0.17"
+attohttpc = "0.18"
 csv = "1.1"
 steam_review_api = {path = "../steam_review_api", features = ["convenience_structs"]}
 url = "2.2"
